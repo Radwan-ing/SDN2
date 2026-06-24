@@ -349,11 +349,24 @@ export default function MaintenanceActionForm({
               const pdf = new jsPDF({
                 orientation: 'portrait',
                 unit: 'mm',
-                format: [mmWidth, mmHeight],
+                format: 'a4',
                 compress: true
               });
 
-              pdf.addImage(imgData, 'JPEG', 0, 0, mmWidth, (canvas.height * mmWidth) / canvas.width, undefined, 'FAST');
+              const pdfWidth = pdf.internal.pageSize.getWidth();
+              const pdfHeight = (canvas.height * pdfWidth) / canvas.width;
+              let heightLeft = pdfHeight;
+              let position = 0;
+
+              pdf.addImage(imgData, 'JPEG', 0, position, pdfWidth, pdfHeight, undefined, 'FAST');
+              heightLeft -= pdf.internal.pageSize.getHeight();
+
+              while (heightLeft >= 0) {
+                position = heightLeft - pdfHeight;
+                pdf.addPage();
+                pdf.addImage(imgData, 'JPEG', 0, position, pdfWidth, pdfHeight, undefined, 'FAST');
+                heightLeft -= pdf.internal.pageSize.getHeight();
+              }
               
               const firstActionItem = availableItems.find(i => i.id === actionItems[0]?.itemId);
               const custName = firstActionItem?.customerName || 'عام';
@@ -457,7 +470,7 @@ export default function MaintenanceActionForm({
 
         {/* Printable A4 Container */}
         <div className="flex-1 overflow-x-auto bg-black p-4 md:p-8 pb-24 text-right w-full">
-          <div id="print-action-area" className="p-8 bg-white text-gray-900 print:p-0 print:bg-white print:text-black w-[800px] mx-auto flex flex-col relative shrink-0 font-cairo text-right" dir="rtl">
+          <div id="print-action-area" className="p-8 bg-white text-gray-900 print:p-0 print:bg-white print:text-black w-[794px] min-h-[1123px] mx-auto flex flex-col relative shrink-0 font-cairo text-right" dir="rtl">
             {/* Header Layout */}
             <div className="flex justify-between items-start border-b-2 border-gray-900 pb-4 mb-4">
               {/* Right Corner: Shop Name */}
@@ -742,6 +755,9 @@ export default function MaintenanceActionForm({
                         <input 
                            type="number"
                            min="1"
+                           dir="ltr"
+                           lang="en"
+                           onFocus={e => e.target.select()}
                            max={selectedItem ? (Number(selectedItem.quantity) || 1) : 1}
                            value={itemRow.quantity === 0 ? '' : itemRow.quantity}
                            onChange={(e) => updateActionItem(index, 'quantity', parseInt(e.target.value) || 0)}

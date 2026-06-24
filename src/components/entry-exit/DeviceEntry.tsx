@@ -458,11 +458,24 @@ export default function DeviceEntry({ onBack, user }: { onBack: () => void, user
               const pdf = new jsPDF({
                 orientation: 'portrait',
                 unit: 'mm',
-                format: [mmWidth, mmHeight],
+                format: 'a4',
                 compress: true
               });
 
-              pdf.addImage(imgData, 'JPEG', 0, 0, mmWidth, (canvas.height * mmWidth) / canvas.width, undefined, 'FAST');
+              const pdfWidth = pdf.internal.pageSize.getWidth();
+              const pdfHeight = (canvas.height * pdfWidth) / canvas.width;
+              let heightLeft = pdfHeight;
+              let position = 0;
+
+              pdf.addImage(imgData, 'JPEG', 0, position, pdfWidth, pdfHeight, undefined, 'FAST');
+              heightLeft -= pdf.internal.pageSize.getHeight();
+
+              while (heightLeft >= 0) {
+                position = heightLeft - pdfHeight;
+                pdf.addPage();
+                pdf.addImage(imgData, 'JPEG', 0, position, pdfWidth, pdfHeight, undefined, 'FAST');
+                heightLeft -= pdf.internal.pageSize.getHeight();
+              }
               
               const formattedDate = new Date().toISOString().split('T')[0];
               const filename = `سند إستلام أجهزة للصيانة_${customer.name}_${formattedDate}.pdf`;
@@ -668,7 +681,7 @@ export default function DeviceEntry({ onBack, user }: { onBack: () => void, user
 
           {/* Printable A4 Container */}
           <div className="flex-1 overflow-x-auto bg-black p-4 md:p-8 pb-24 text-right w-full">
-            <div id="print-report-area" className="p-8 bg-white text-gray-900 print:p-0 print:bg-white print:text-black w-[800px] mx-auto flex flex-col relative shrink-0 font-cairo text-right" dir="rtl">
+            <div id="print-report-area" className="p-8 bg-white text-gray-900 print:p-0 print:bg-white print:text-black w-[794px] min-h-[1123px] mx-auto flex flex-col relative shrink-0 font-cairo text-right" dir="rtl">
               {/* Header Layout */}
               <div className="flex justify-between items-start border-b-2 border-gray-900 pb-4 mb-4">
                 {/* Right Corner: Shop Name */}
@@ -775,14 +788,13 @@ export default function DeviceEntry({ onBack, user }: { onBack: () => void, user
                 <tbody className="text-black font-bold">
                   {items.map((item, index) => (
                     <tr key={index} className="border-b border-black">
-                      <td className="py-3 px-3 border-l border-black text-xs">{index + 1}</td>
-                      <td className="py-3 px-3 border-l border-black text-right">
-                        <div className="text-sm font-black">{item.deviceType}</div>
-                        <div className="text-gray-600 text-xs mt-1">{item.deviceName}</div>
+                      <td className="py-3 px-3 border-l border-black text-xs text-center">{index + 1}</td>
+                      <td className="py-3 px-3 border-l border-black text-right whitespace-nowrap text-sm">
+                        {item.deviceType} - <span className="text-gray-600 text-[10px]">{item.deviceName}</span>
                       </td>
-                      <td className="py-3 px-3 border-l border-black text-xs text-right whitespace-pre-wrap">{item.faultType || '-'}</td>
-                      <td className="py-3 px-3 border-l border-black text-xs text-right whitespace-pre-wrap">{item.deviceNotes || '-'}</td>
-                      <td className="py-3 px-3 text-sm font-bold">{item.quantity}</td>
+                      <td className="py-3 px-3 border-l border-black text-xs text-right whitespace-nowrap overflow-hidden max-w-[200px] text-ellipsis">{item.faultType || '-'}</td>
+                      <td className="py-3 px-3 border-l border-black text-xs text-right whitespace-nowrap overflow-hidden max-w-[200px] text-ellipsis">{item.deviceNotes || '-'}</td>
+                      <td className="py-3 px-3 text-sm font-bold text-center">{item.quantity}</td>
                     </tr>
                   ))}
                   <tr className="bg-gray-100 border-t-2 border-black">
@@ -1030,7 +1042,7 @@ export default function DeviceEntry({ onBack, user }: { onBack: () => void, user
                            }}
                            onFocus={() => setActiveAutocomplete({ index: 0, type: 'deviceType' })}
                            onClick={() => setActiveAutocomplete({ index: 0, type: 'deviceType' })}
-                           onBlur={() => setTimeout(() => setActiveAutocomplete(null), 200)}
+                           onBlur={() => setTimeout(() => setActiveAutocomplete(prev => prev?.type === 'deviceType' ? null : prev), 200)}
                            className="w-full bg-black border border-white/10 rounded-xl px-3 py-2 focus:border-orange-500 outline-none text-sm font-bold text-white text-right"
                            placeholder="اكتب أو ابحث..."
                          />
@@ -1075,7 +1087,7 @@ export default function DeviceEntry({ onBack, user }: { onBack: () => void, user
                            }}
                            onFocus={() => setActiveAutocomplete({ index: 0, type: 'deviceName' })}
                            onClick={() => setActiveAutocomplete({ index: 0, type: 'deviceName' })}
-                           onBlur={() => setTimeout(() => setActiveAutocomplete(null), 200)}
+                           onBlur={() => setTimeout(() => setActiveAutocomplete(prev => prev?.type === 'deviceName' ? null : prev), 200)}
                            className="w-full bg-black border border-white/10 rounded-xl px-3 py-2 focus:border-orange-500 outline-none text-sm text-white text-right"
                            placeholder="ابحث او اكتب..."
                          />
@@ -1118,6 +1130,9 @@ export default function DeviceEntry({ onBack, user }: { onBack: () => void, user
                        <input 
                          type="number"
                          min="1"
+                         dir="ltr"
+                         lang="en"
+                         onFocus={(e) => e.target.select()}
                          value={Number.isNaN(Number(currentDevice.quantity)) ? '' : currentDevice.quantity}
                          onChange={(e) => setCurrentDevice({...currentDevice, quantity: e.target.value === '' ? '' : Math.max(1, parseInt(e.target.value)) })}
                          className="w-full bg-black border border-white/10 rounded-xl px-2 py-2 focus:border-orange-500 outline-none text-center font-mono font-black text-white text-sm flex-1"
@@ -1186,11 +1201,11 @@ export default function DeviceEntry({ onBack, user }: { onBack: () => void, user
                             {items.map((item, index) => (
                               <tr key={index} className="hover:bg-white/5 transition-colors group bg-black/20">
                                 <td className="py-3 px-4 text-sm font-black text-gray-600 text-center">{index + 1}</td>
-                                <td className="py-3 px-4 text-sm font-bold text-white"><div className="px-2 py-1 bg-white/5 rounded-lg border border-white/5 inline-block">{item.deviceType || '-'}</div></td>
-                                <td className="py-3 px-4 text-sm text-gray-300"><div className="px-2 py-1 bg-white/5 rounded-lg border border-white/5 inline-block">{item.deviceName || '-'}</div></td>
+                                <td className="py-3 px-4 text-sm font-bold text-white whitespace-nowrap"><div className="px-2 py-1 bg-white/5 rounded-lg border border-white/5 inline-block">{item.deviceType || '-'}</div></td>
+                                <td className="py-3 px-4 text-sm text-gray-300 whitespace-nowrap"><div className="px-2 py-1 bg-white/5 rounded-lg border border-white/5 inline-block">{item.deviceName || '-'}</div></td>
                                 <td className="py-3 px-4 text-sm font-mono text-white text-center font-bold"><div className="px-2 py-1 bg-white/5 rounded-lg border border-white/5 inline-block w-full">{item.quantity}</div></td>
-                                <td className="py-3 px-4 text-sm text-gray-300 max-w-[200px]"><div className="truncate py-1 inline-block w-full" title={item.faultType}>{item.faultType || '-'}</div></td>
-                                <td className="py-3 px-4 text-sm text-gray-400 max-w-[200px]"><div className="truncate py-1 inline-block w-full" title={item.deviceNotes}>{item.deviceNotes || '-'}</div></td>
+                                <td className="py-3 px-4 text-sm text-gray-300 max-w-[200px] whitespace-nowrap"><div className="truncate py-1 inline-block w-full" title={item.faultType}>{item.faultType || '-'}</div></td>
+                                <td className="py-3 px-4 text-sm text-gray-400 max-w-[200px] whitespace-nowrap"><div className="truncate py-1 inline-block w-full" title={item.deviceNotes}>{item.deviceNotes || '-'}</div></td>
                                 <td className="py-3 px-4 text-center">
                                   <div className="flex items-center justify-center gap-2">
                                     <button 

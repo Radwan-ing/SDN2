@@ -981,7 +981,7 @@ export default function Inspection({ user, onBack, initialInvoice }: { user: Use
 
             {/* Printable Section Box */}
             <div className="overflow-x-auto w-full pb-4 bg-white">
-              <div id="print-report-area" className="p-8 bg-white text-gray-900 print:p-0 print:bg-white print:text-black w-[800px] mx-auto">
+              <div id="print-report-area" className="p-8 bg-white text-gray-900 print:p-0 print:bg-white print:text-black w-[794px] min-h-[1123px] mx-auto">
                   {/* Header Layout */}
                   <div className="flex justify-between items-start border-b-2 border-gray-900 pb-4 mb-4">
                     {/* Right Corner: Shop Name */}
@@ -1099,7 +1099,7 @@ export default function Inspection({ user, onBack, initialInvoice }: { user: Use
                               <td className="px-3 py-3 font-bold text-gray-900 border-l border-gray-400 leading-relaxed">
                                 {item.deviceType} {item.deviceName ? `- ${item.deviceName}` : ''}
                               </td>
-                              <td className="px-3 py-3 text-gray-800 leading-relaxed border-l border-gray-400 whitespace-pre-wrap">
+                              <td className="px-3 py-3 text-gray-800 leading-relaxed border-l border-gray-400 whitespace-nowrap overflow-hidden max-w-[200px] text-ellipsis">
                                 {item.engineerReport}
                               </td>
                               <td className="px-3 py-3 text-center font-mono text-gray-900 border-l border-gray-400">
@@ -1395,7 +1395,7 @@ export default function Inspection({ user, onBack, initialInvoice }: { user: Use
                        onClick={() => handleUpdateCurrentField('decision', 'unrepairable')}
                        className={`flex-1 py-1.5 text-xs font-bold transition-all rounded-lg ${currentActionItem.decision === 'unrepairable' ? 'bg-red-600 text-white shadow-lg' : 'text-gray-400 hover:bg-white/5'}`}
                      >
-                       غير قابل
+                       لا يصلح
                      </button>
                    </div>
                  </div>
@@ -1406,6 +1406,8 @@ export default function Inspection({ user, onBack, initialInvoice }: { user: Use
                      <input 
                        type="number"
                        min="0"
+                       dir="ltr"
+                       lang="en"
                        value={Number.isNaN(Number(currentActionItem.unitCost)) ? '' : currentActionItem.unitCost} onFocus={e => e.target.select()}
                        onChange={e => handleUpdateCurrentField('unitCost', e.target.value === '' ? '' : Math.max(0, parseFloat(e.target.value)))}
                        className="w-full md:w-24 bg-black/40 border border-white/10 px-3 py-2 focus:border-purple-500 outline-none transition-all rounded-xl"
@@ -1418,6 +1420,8 @@ export default function Inspection({ user, onBack, initialInvoice }: { user: Use
                        type="number"
                        disabled
                        readOnly
+                       dir="ltr"
+                       lang="en"
                        value={currentActionItem.cost}
                        className="w-full md:w-24 bg-black/20 border border-white/5 px-3 py-2 text-purple-400 font-bold outline-none cursor-not-allowed rounded-xl"
                      />
@@ -1505,7 +1509,7 @@ export default function Inspection({ user, onBack, initialInvoice }: { user: Use
                          <td className="px-4 py-3 text-center whitespace-nowrap">
                            {item.decision === 'repairing' && <span className="text-orange-500 bg-orange-500/10 px-2 py-1 rounded text-[10px] font-bold">صيانة</span>}
                            {item.decision === 'intact' && <span className="text-emerald-500 bg-emerald-500/10 px-2 py-1 rounded text-[10px] font-bold">سليم</span>}
-                           {item.decision === 'unrepairable' && <span className="text-red-500 bg-red-500/10 px-2 py-1 rounded text-[10px] font-bold">غير قابل</span>}
+                           {item.decision === 'unrepairable' && <span className="text-red-500 bg-red-500/10 px-2 py-1 rounded text-[10px] font-bold">لا يصلح</span>}
                          </td>
                          <td className="px-4 py-3 text-gray-300 max-w-[200px] truncate whitespace-nowrap" title={item.report}>{item.report}</td>
                          <td className="px-4 py-3 text-purple-400 font-bold text-center whitespace-nowrap">{item.cost > 0 ? item.cost : '-'}</td>

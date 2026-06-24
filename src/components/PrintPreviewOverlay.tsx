@@ -360,7 +360,7 @@ export default function PrintPreviewOverlay({
       </div>
 
       <div className="flex-1 overflow-y-auto bg-black p-4 md:p-8 pb-24 text-right w-full">
-        <div id="print-preview-area" className="p-8 bg-white text-gray-900 print:p-0 print:bg-white print:text-black w-[800px] mx-auto flex flex-col relative shrink-0 font-cairo shadow-2xl min-h-[1100px]" dir="rtl">
+        <div id="print-preview-area" className="p-8 bg-white text-gray-900 print:p-0 print:bg-white print:text-black w-[794px] mx-auto flex flex-col relative shrink-0 font-cairo shadow-2xl min-h-[1123px]" dir="rtl">
           
           {/* Universal Header Layout */}
           <div className="flex justify-between items-start border-b-2 border-gray-900 pb-4 mb-4">
@@ -509,12 +509,11 @@ export default function PrintPreviewOverlay({
                     {items.map((it:any, idx:number) => (
                       <tr key={idx} className="border-b border-black">
                         <td className="py-3 px-3 border-l border-black text-xs font-mono">{idx + 1}</td>
-                        <td className="py-3 px-3 border-l border-black text-right">
-                          <div className="text-sm font-black">{it.deviceType || '-'}</div>
-                          <div className="text-gray-600 text-[10px] mt-0.5">{it.deviceName || '-'}</div>
+                        <td className="py-3 px-3 border-l border-black text-right whitespace-nowrap text-sm">
+                          {it.deviceType || '-'} - <span className="text-gray-600 text-[10px]">{it.deviceName || '-'}</span>
                         </td>
-                        <td className="py-3 px-3 border-l border-black text-xs text-right whitespace-pre-wrap">{it.faultType || it.customerProblem || '-'}</td>
-                        <td className="py-3 px-3 border-l border-black text-xs text-right whitespace-pre-wrap">{it.deviceNotes || '-'}</td>
+                        <td className="py-3 px-3 border-l border-black text-xs text-right whitespace-nowrap overflow-hidden max-w-[150px] text-ellipsis">{it.faultType || it.customerProblem || '-'}</td>
+                        <td className="py-3 px-3 border-l border-black text-xs text-right whitespace-nowrap overflow-hidden max-w-[150px] text-ellipsis">{it.deviceNotes || '-'}</td>
                         <td className="py-3 px-3 text-sm font-bold font-mono">{it.quantity || 1}</td>
                       </tr>
                     ))}
@@ -600,10 +599,10 @@ export default function PrintPreviewOverlay({
                     <tr key={idx} className="border-b border-black">
                       <td className="py-3 px-2 border-l border-black text-[10px] font-mono">{idx + 1}</td>
                       <td className="py-3 px-2 border-l border-black text-right whitespace-nowrap text-xs">
-                        {it.deviceType} <br/> <span className="text-gray-500 text-[10px]">{it.deviceName}</span>
+                        {it.deviceType} <span className="text-gray-500 text-[10px]">- {it.deviceName}</span>
                       </td>
-                      <td className="py-3 px-2 border-l border-black text-[11px] text-right">{it.faultType || it.customerProblem || '-'}</td>
-                      <td className="py-3 px-2 border-l border-black text-[11px] text-right text-emerald-800">{it.technicalNotes || '-'}</td>
+                      <td className="py-3 px-2 border-l border-black text-[11px] text-right whitespace-nowrap overflow-hidden max-w-[150px] text-ellipsis">{it.faultType || it.customerProblem || '-'}</td>
+                      <td className="py-3 px-2 border-l border-black text-[11px] text-right text-emerald-800 whitespace-nowrap overflow-hidden max-w-[150px] text-ellipsis">{it.technicalNotes || '-'}</td>
                       <td className="py-3 px-2 border-l border-black text-xs text-center text-blue-700">
                          {['40','50'].includes(it.status) ? 'موافق' : 'بانتظار الرد'}
                       </td>
@@ -640,9 +639,9 @@ export default function PrintPreviewOverlay({
                       return (
                         <tr key={idx} className="border-b border-black">
                           <td className="px-3 py-4 text-center font-mono border-l-2 border-black">{idx+1}</td>
-                          <td className="px-3 py-4 border-l-2 border-black text-sm">
-                            <span className="block mb-1">{it.deviceType || '-'} - {it.deviceName || '-'}</span>
-                            {it.technicalNotes && <span className="text-gray-600 text-xs mt-1 block whitespace-pre-wrap">{it.technicalNotes}</span>}
+                          <td className="px-3 py-4 border-l-2 border-black text-sm whitespace-nowrap overflow-hidden max-w-[200px] text-ellipsis">
+                            {it.deviceType || '-'} - {it.deviceName || '-'}
+                            {it.technicalNotes && <span className="text-gray-600 text-[10px] mr-2">- {it.technicalNotes}</span>}
                           </td>
                           <td className="px-3 py-4 text-center font-mono border-l-2 border-black">{qty}</td>
                           <td className="px-3 py-4 text-center font-mono border-l-2 border-black">{unit.toLocaleString()}</td>
@@ -680,9 +679,9 @@ export default function PrintPreviewOverlay({
                     <tr key={idx} className="border-b border-black">
                       <td className="py-3 px-2 border-l border-black text-xs font-mono">{idx + 1}</td>
                       <td className="py-3 px-2 border-l border-black text-right whitespace-nowrap text-sm">
-                        {it.deviceType} <br/> <span className="text-gray-500 text-xs">{it.deviceName}</span>
+                        {it.deviceType} <span className="text-gray-500 text-xs">- {it.deviceName}</span>
                       </td>
-                      <td className="py-3 px-2 border-l border-black text-xs text-right whitespace-pre-wrap">{it.faultType || it.customerProblem || '-'}</td>
+                      <td className="py-3 px-2 border-l border-black text-xs text-right whitespace-nowrap overflow-hidden max-w-[150px] text-ellipsis">{it.faultType || it.customerProblem || '-'}</td>
                       <td className="py-3 px-2 border-l border-black text-sm text-center text-blue-700">
                         {it.technician || '-'}
                       </td>
@@ -711,11 +710,11 @@ export default function PrintPreviewOverlay({
                   {items.map((it:any, idx:number) => (
                     <tr key={idx} className="border-b border-black">
                       <td className="py-3 px-2 border-l border-black text-xs font-mono">{idx + 1}</td>
-                      <td className="py-3 px-2 border-l border-black text-right text-xs">
+                      <td className="py-3 px-2 border-l border-black text-right whitespace-nowrap text-xs">
                         {it.deviceType} - {it.deviceName}
                       </td>
-                      <td className="py-3 px-2 border-l border-black text-[11px] text-right">{it.faultType || it.customerProblem || '-'}</td>
-                      <td className="py-3 px-2 border-l border-black text-[11px] text-right">{it.technicalNotes || '-'}</td>
+                      <td className="py-3 px-2 border-l border-black text-[11px] text-right whitespace-nowrap overflow-hidden max-w-[120px] text-ellipsis">{it.faultType || it.customerProblem || '-'}</td>
+                      <td className="py-3 px-2 border-l border-black text-[11px] text-right whitespace-nowrap overflow-hidden max-w-[120px] text-ellipsis">{it.technicalNotes || '-'}</td>
                       <td className={`py-3 px-2 border-l border-black text-xs text-center font-black ${['50','60'].includes(it.status) ? 'text-emerald-600' : 'text-orange-600'}`}>
                         {getStatusText(it.status)}
                       </td>

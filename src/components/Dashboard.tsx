@@ -112,6 +112,20 @@ export default function Dashboard({ onNavigate, shopName, fiscalYear }: { onNavi
           description="إدارة حسابات وعمليات الخزينة"
           color="bg-emerald-600 hover:bg-emerald-700 text-white"
         />
+        <ActionCard 
+          onClick={() => onNavigate('inventory')}
+          icon={<Package size={28} className="lg:w-9 lg:h-9" />} 
+          label="المخزون" 
+          description="إدارة مخزون الأجهزة"
+          color="bg-purple-600 hover:bg-purple-700 text-white"
+        />
+        <ActionCard 
+          onClick={() => onNavigate('reports')}
+          icon={<BarChart3 size={28} className="lg:w-9 lg:h-9" />} 
+          label="التقارير" 
+          description="عرض تقارير النظام"
+          color="bg-indigo-600 hover:bg-indigo-700 text-white"
+        />
       </div>
     </div>
   );

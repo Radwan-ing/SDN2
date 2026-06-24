@@ -1008,7 +1008,7 @@ export default function ApprovalAndParts({ user, onBack, initialInvoice }: { use
 
             {/* Content to print is simply the active print element or logic for it */}
             <div className="overflow-x-auto w-full pb-4 bg-white">
-              <div id="print-report-area" className="p-8 bg-white text-gray-900 print:p-0 print:bg-white print:text-black w-[800px] mx-auto">
+              <div id="print-report-area" className="p-8 bg-white text-gray-900 print:p-0 print:bg-white print:text-black w-[794px] min-h-[1123px] mx-auto">
                   {/* Header Layout */}
                   <div className="flex justify-between items-start border-b-2 border-gray-900 pb-4 mb-4">
                     {/* Right Corner: Shop Name */}
@@ -1118,10 +1118,10 @@ export default function ApprovalAndParts({ user, onBack, initialInvoice }: { use
                               <td className="px-3 py-3 font-bold text-gray-900 border-l border-gray-400 leading-relaxed">
                                 {it.deviceType} {it.deviceName ? `- ${it.deviceName}` : ''}
                               </td>
-                              <td className="px-3 py-3 text-gray-800 leading-relaxed border-l border-gray-400 whitespace-pre-wrap">
+                              <td className="px-3 py-3 text-gray-800 leading-relaxed border-l border-gray-400 whitespace-nowrap overflow-hidden max-w-[200px] text-ellipsis">
                                 {it.engineerReport || 'لا يوجد تقرير'}
                               </td>
-                              <td className="px-3 py-3 text-gray-800 leading-relaxed border-l border-gray-400 whitespace-pre-wrap">
+                              <td className="px-3 py-3 text-gray-800 leading-relaxed border-l border-gray-400 whitespace-nowrap overflow-hidden max-w-[200px] text-ellipsis">
                                 <div className="font-bold mb-1">({action.outcome === 'approved' ? 'موافقة' : action.outcome === 'waiting_parts' ? 'انتظار قطع' : 'رفض'})</div>
                                 {action.reason || '-'}
                               </td>
@@ -1790,7 +1790,7 @@ export default function ApprovalAndParts({ user, onBack, initialInvoice }: { use
 
               {/* Printable Section Box */}
               <div className="overflow-x-auto w-full pb-4">
-                <div id="print-report-area" className="p-8 bg-white text-gray-900 print:p-0 print:bg-white print:text-black w-[800px] mx-auto">
+                <div id="print-report-area" className="p-8 bg-white text-gray-900 print:p-0 print:bg-white print:text-black w-[794px] min-h-[1123px] mx-auto">
                     {/* Header Layout */}
                     <div className="flex justify-between items-start border-b-2 border-gray-900 pb-4 mb-4">
                       {/* Right Corner: Shop Name */}
@@ -1903,7 +1903,7 @@ export default function ApprovalAndParts({ user, onBack, initialInvoice }: { use
                               <td className="px-3 py-3 font-bold text-gray-900 border-l border-gray-400 leading-relaxed">
                                 {item.deviceType} {item.deviceName ? `- ${item.deviceName}` : ''}
                               </td>
-                              <td className="px-3 py-3 text-gray-800 leading-relaxed border-l border-gray-400 whitespace-pre-wrap">
+                              <td className="px-3 py-3 text-gray-800 leading-relaxed border-l border-gray-400 whitespace-nowrap overflow-hidden max-w-[200px] text-ellipsis">
                                 {item.engineerReport || item.faultType || 'قيد المعاينة والمراجعة'}
                               </td>
                               <td className="px-3 py-3 text-center font-mono text-gray-900 border-l border-gray-400">

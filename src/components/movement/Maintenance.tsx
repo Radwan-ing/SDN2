@@ -495,11 +495,24 @@ export default function Maintenance({ user, onBack, initialInvoice }: { user: Us
               const pdf = new jsPDF({
                 orientation: 'portrait',
                 unit: 'mm',
-                format: [mmWidth, mmHeight],
+                format: 'a4',
                 compress: true
               });
 
-              pdf.addImage(imgData, 'JPEG', 0, 0, mmWidth, (canvas.height * mmWidth) / canvas.width, undefined, 'FAST');
+              const pdfWidth = pdf.internal.pageSize.getWidth();
+              const pdfHeight = (canvas.height * pdfWidth) / canvas.width;
+              let heightLeft = pdfHeight;
+              let position = 0;
+
+              pdf.addImage(imgData, 'JPEG', 0, position, pdfWidth, pdfHeight, undefined, 'FAST');
+              heightLeft -= pdf.internal.pageSize.getHeight();
+
+              while (heightLeft >= 0) {
+                position = heightLeft - pdfHeight;
+                pdf.addPage();
+                pdf.addImage(imgData, 'JPEG', 0, position, pdfWidth, pdfHeight, undefined, 'FAST');
+                heightLeft -= pdf.internal.pageSize.getHeight();
+              }
               
               const formattedDate = new Date().toISOString().split('T')[0];
               const filename = `تقرير الصيانة_${selectedInvoice.customerName}_${formattedDate}.pdf`;
@@ -600,7 +613,7 @@ export default function Maintenance({ user, onBack, initialInvoice }: { user: Us
 
           {/* Printable A4 Container */}
           <div className="flex-1 overflow-x-auto bg-black p-4 md:p-8 pb-24 text-right w-full">
-            <div id="print-action-area" className="p-8 bg-white text-gray-900 print:p-0 print:bg-white print:text-black w-[800px] mx-auto flex flex-col relative shrink-0 font-cairo text-right" dir="rtl">
+            <div id="print-action-area" className="p-8 bg-white text-gray-900 print:p-0 print:bg-white print:text-black w-[794px] min-h-[1123px] mx-auto flex flex-col relative shrink-0 font-cairo text-right" dir="rtl">
               {/* Header Layout */}
               <div className="flex justify-between items-start border-b-2 border-gray-900 pb-4 mb-4">
                 {/* Right Corner: Shop Name */}
@@ -907,10 +920,12 @@ export default function Maintenance({ user, onBack, initialInvoice }: { user: Us
                    <input 
                      type="number"
                      min="1" step="1"
+                     dir="ltr"
+                     lang="en"
+                     onFocus={e => e.target.select()}
                      max={currentFormRow.id ? getAvailableQuantity(currentFormRow.id, editingIndex !== null ? editingIndex : -1) : 1}
                      value={Number.isNaN(Number(currentFormRow.count)) ? '' : currentFormRow.count}
                      onKeyDown={e => { if (e.key === '.' || e.key === ',' || e.key === '-' || e.key === '+' || e.key === 'e' || e.key === 'E') e.preventDefault(); }}
-                     onFocus={e => e.target.select()}
                      onChange={e => {
                        let val = e.target.value === '' ? '' : parseInt(e.target.value);
                        if (typeof val === 'number') {

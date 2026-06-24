@@ -907,6 +907,9 @@ export default function AccountingInputs() {
                         type="number"
                         min="0"
                         max="5"
+                        dir="ltr"
+                        lang="en"
+                        onFocus={e => e.target.select()}
                         value={currencyForm.decimals}
                         onChange={(e) => setCurrencyForm({ ...currencyForm, decimals: parseInt(e.target.value) || 0 })}
                         className="w-full bg-[#242424] border border-white/10 rounded-xl px-3 py-2 text-xs font-cairo text-white outline-none focus:border-amber-500/30"

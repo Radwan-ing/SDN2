@@ -1101,6 +1101,9 @@ export default function DeviceManagement({ user, onBack }: { user: User; onBack:
                         <input
                           type="number"
                           min={1}
+                          dir="ltr"
+                          lang="en"
+                          onFocus={e => e.target.select()}
                           value={adminNewQuantity}
                           onChange={(e) => setAdminNewQuantity(Math.max(1, parseInt(e.target.value) || 1))}
                           className="w-full bg-[#1a1a1a] border border-white/10 rounded-xl px-4 py-2.5 text-sm font-mono focus:border-orange-500 outline-none text-white font-bold text-center"
@@ -1138,6 +1141,9 @@ export default function DeviceManagement({ user, onBack }: { user: User; onBack:
                           type="number"
                           min={0}
                           step="0.01"
+                          dir="ltr"
+                          lang="en"
+                          onFocus={e => e.target.select()}
                           value={adminNewPrice}
                           onChange={(e) => setAdminNewPrice(Math.max(0, parseFloat(e.target.value) || 0))}
                           className="w-full bg-[#1a1a1a] border border-white/10 rounded-xl px-4 py-2.5 text-sm font-mono focus:border-orange-500 outline-none text-white font-bold text-center border-dashed"

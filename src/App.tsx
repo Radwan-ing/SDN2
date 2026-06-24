@@ -18,7 +18,8 @@ import {
   Bell,
   LogOut,
   Cpu,
-  CircleDollarSign
+  CircleDollarSign,
+  Wrench
 } from 'lucide-react';
 import { collection, query, where, getDocs, addDoc, doc, getDoc, setDoc } from './firebase';
 import { db } from './firebase';
@@ -28,6 +29,8 @@ import { User, ShopConfig } from './types';
 import Dashboard from './components/Dashboard';
 import EntryExit from './components/entry-exit';
 import DeviceMovement from './components/movement';
+import Inspection from './components/movement/Inspection';
+import Maintenance from './components/movement/Maintenance';
 import Inventory from './components/Inventory';
 import Reports from './components/Reports';
 import Customers from './components/Customers';
@@ -49,7 +52,7 @@ export default function App() {
   const [shopConfig, setShopConfig] = useState<ShopConfig | null>(null);
   const [loading, setLoading] = useState(true);
   const [showSetup, setShowSetup] = useState(false);
-  const [activeTab, setActiveTab] = useState<'dashboard' | 'entry-exit' | 'device-movement' | 'inventory' | 'reports' | 'customers' | 'settings' | 'search' | 'vault' | 'device-management'>('dashboard');
+  const [activeTab, setActiveTab] = useState<'dashboard' | 'entry-exit' | 'device-movement' | 'inspection' | 'maintenance' | 'inventory' | 'reports' | 'customers' | 'settings' | 'search' | 'vault' | 'device-management'>('dashboard');
 
   useEffect(() => {
     document.dir = i18n.language === 'ar' ? 'rtl' : 'ltr';
@@ -217,6 +220,10 @@ export default function App() {
         return <EntryExit onBack={() => setActiveTab('dashboard')} user={user} />;
       case 'device-movement':
         return <DeviceMovement onBack={() => setActiveTab('dashboard')} user={user} />;
+      case 'inspection':
+        return <Inspection user={user} onBack={() => setActiveTab('dashboard')} />;
+      case 'maintenance':
+        return <Maintenance user={user} onBack={() => setActiveTab('dashboard')} />;
       case 'inventory':
         return <Inventory user={user} onBack={() => setActiveTab('dashboard')} />;
       case 'reports':
@@ -259,7 +266,8 @@ export default function App() {
             <NavItem active={activeTab === 'vault'} onClick={() => setActiveTab('vault')} icon={<CircleDollarSign size={22} />} label={t('common.vault')} />
             <NavItem active={activeTab === 'customers'} onClick={() => setActiveTab('customers')} icon={<Users size={22} />} label={t('common.customers')} />
             <NavItem active={activeTab === 'device-movement'} onClick={() => setActiveTab('device-movement')} icon={<SettingsIcon size={22} />} label={t('common.deviceMovement')} />
-            <NavItem active={activeTab === 'inventory'} onClick={() => setActiveTab('inventory')} icon={<Package size={22} />} label={t('common.inventory')} />
+            <NavItem active={activeTab === 'inspection'} onClick={() => setActiveTab('inspection')} icon={<Search size={22} />} label="فحص" />
+            <NavItem active={activeTab === 'maintenance'} onClick={() => setActiveTab('maintenance')} icon={<Wrench size={22} />} label="صيانة" />
           </nav>
 
           <div className="p-4 border-t border-white/5 space-y-2">
@@ -288,6 +296,8 @@ export default function App() {
                 {activeTab === 'device-management' ? 'إدارة الأجهزة' : 
                  activeTab === 'entry-exit' ? (i18n.language === 'ar' ? 'دخول وخروج أجهزة' : 'Device Entry & Exit') :
                  activeTab === 'device-movement' ? (i18n.language === 'ar' ? 'قسم الصيانة' : 'Maintenance Department') :
+                 activeTab === 'inspection' ? (i18n.language === 'ar' ? 'فحص الأجهزة' : 'Inspection') :
+                 activeTab === 'maintenance' ? (i18n.language === 'ar' ? 'صيانة الأجهزة' : 'Maintenance') :
                  activeTab === 'vault' ? (i18n.language === 'ar' ? 'الحسابات' : 'Accounts') :
                  t(`common.${activeTab.replace(/-([a-z])/g, (g) => g[1].toUpperCase())}`)}
               </h2>
@@ -339,10 +349,10 @@ export default function App() {
               label={t('common.dashboard')}
             />
             <MobileNavItem 
-              active={activeTab === 'inventory'} 
-              onClick={() => setActiveTab('inventory')} 
-              icon={<Package size={20} />} 
-              label={t('common.inventory')}
+              active={activeTab === 'inspection'} 
+              onClick={() => setActiveTab('inspection')} 
+              icon={<Search size={20} />} 
+              label="فحص"
             />
             <div className="relative -top-3">
               <button 
@@ -353,10 +363,10 @@ export default function App() {
               </button>
             </div>
             <MobileNavItem 
-              active={activeTab === 'reports'} 
-              onClick={() => setActiveTab('reports')} 
-              icon={<BarChart3 size={20} />} 
-              label={t('common.reports')}
+              active={activeTab === 'maintenance'} 
+              onClick={() => setActiveTab('maintenance')} 
+              icon={<Wrench size={20} />} 
+              label="صيانة"
             />
             <MobileNavItem 
               active={activeTab === 'settings'} 

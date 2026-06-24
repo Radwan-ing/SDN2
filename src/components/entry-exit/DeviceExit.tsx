@@ -281,13 +281,26 @@ export default function DeviceExit({ user, onBack }: { user: User, onBack: () =>
       const mmHeight = (clonedAreaHeight * 0.264583) + 20;
 
       const pdf = new jsPDF({
-        orientation: 'portrait',
-        unit: 'mm',
-        format: [mmWidth, mmHeight],
-        compress: true
-      });
+                orientation: 'portrait',
+                unit: 'mm',
+                format: 'a4',
+                compress: true
+              });
 
-      pdf.addImage(imgData, 'JPEG', 0, 0, mmWidth, (canvas.height * mmWidth) / canvas.width, undefined, 'FAST');
+              const pdfWidth = pdf.internal.pageSize.getWidth();
+              const pdfHeight = (canvas.height * pdfWidth) / canvas.width;
+              let heightLeft = pdfHeight;
+              let position = 0;
+
+              pdf.addImage(imgData, 'JPEG', 0, position, pdfWidth, pdfHeight, undefined, 'FAST');
+              heightLeft -= pdf.internal.pageSize.getHeight();
+
+              while (heightLeft >= 0) {
+                position = heightLeft - pdfHeight;
+                pdf.addPage();
+                pdf.addImage(imgData, 'JPEG', 0, position, pdfWidth, pdfHeight, undefined, 'FAST');
+                heightLeft -= pdf.internal.pageSize.getHeight();
+              }
       
       const formattedDate = new Date().toISOString().split('T')[0];
       const filename = `فاتورة تسليم أجهزة_${invoice.customerName}_${formattedDate}.pdf`;
@@ -471,7 +484,7 @@ export default function DeviceExit({ user, onBack }: { user: User, onBack: () =>
 
           {/* Scalable Container for the A4 page */}
           <div className="flex-1 overflow-x-auto bg-black p-4 md:p-8 pb-24 text-right w-full">
-            <div id="print-report-area" className="p-8 bg-white text-gray-900 print:p-0 print:bg-white print:text-black w-[800px] mx-auto flex flex-col relative shrink-0">
+            <div id="print-report-area" className="p-8 bg-white text-gray-900 print:p-0 print:bg-white print:text-black w-[794px] min-h-[1123px] mx-auto flex flex-col relative shrink-0">
               {/* Header Layout */}
               <div className="flex justify-between items-start border-b-2 border-gray-900 pb-4 mb-4">
                 {/* Right Corner: Shop Name */}
@@ -591,9 +604,8 @@ export default function DeviceExit({ user, onBack }: { user: User, onBack: () =>
                       return (
                         <tr key={item.id} className="even:bg-gray-50/50">
                           <td className="px-3 py-3 text-center font-mono font-bold border-l border-gray-400 bg-gray-50">{idx + 1}</td>
-                          <td className="px-3 py-3 font-bold text-gray-900 border-l border-gray-400 leading-relaxed">
-                            <span className="text-gray-500 text-xs block mb-0.5">{item.deviceType || '-'}</span>
-                            {item.deviceName || '-'}
+                          <td className="px-3 py-3 font-bold text-gray-900 border-l border-gray-400 leading-relaxed whitespace-nowrap overflow-hidden max-w-[200px] text-ellipsis">
+                            {item.deviceType || '-'} {item.deviceName ? `- ${item.deviceName}` : ''}
                           </td>
                           <td className="px-3 py-3 text-gray-900 font-bold leading-relaxed border-l border-gray-400 whitespace-nowrap">
                             {subStatusArabic}
@@ -852,7 +864,17 @@ export default function DeviceExit({ user, onBack }: { user: User, onBack: () =>
                       </tr>
                     </thead>
                     <tbody className="divide-y divide-white/5 text-gray-300">
-                      {invoiceItems.map((item, idx) => {
+                      {[...invoiceItems].sort((a, b) => {
+                        const getConditionRank = (item: any) => {
+                          const subStatus = getItemSubStatus(item);
+                          if (subStatus === 'ready') return 1;
+                          if (subStatus === 'intact') return 2;
+                          if (subStatus === 'unrepairable') return 3;
+                          if (subStatus === 'refused') return 4;
+                          return 5;
+                        };
+                        return getConditionRank(a) - getConditionRank(b);
+                      }).map((item, idx) => {
                         const subStatus = getItemSubStatus(item);
                         const isSelected = selectedItemIds.has(item.id!);
                         
@@ -903,7 +925,7 @@ export default function DeviceExit({ user, onBack }: { user: User, onBack: () =>
                             </td>
 
                             {/* 2. النوع/الجهاز */}
-                            <td className="px-3 py-2 text-right text-white font-bold text-xs">
+                            <td className="px-3 py-2 text-right text-white font-bold text-xs whitespace-nowrap">
                               {item.deviceType || '-'} {item.deviceName ? ` / ${item.deviceName}` : ''}
                             </td>
 
@@ -975,6 +997,8 @@ export default function DeviceExit({ user, onBack }: { user: User, onBack: () =>
                         type="number"
                         min={0}
                         step="any"
+                        dir="ltr"
+                        lang="en"
                         value={exitPaidAmount || ''}
                         onFocus={e => e.target.select()}
                         onChange={(e) => {
@@ -1004,6 +1028,8 @@ export default function DeviceExit({ user, onBack }: { user: User, onBack: () =>
                         type="number"
                         min={0}
                         step="any"
+                        dir="ltr"
+                        lang="en"
                         value={exitDiscountAmount || ''}
                         onFocus={e => e.target.select()}
                         onChange={(e) => {
