@@ -1,0 +1,110 @@
+rules_version = '2';
+service cloud.firestore {
+  match /databases/{database}/documents {
+    
+    // 0. Default Deny
+    match /{document=**} {
+      allow read, write: if false;
+    }
+
+    // --- Helpers ---
+    function isSignedIn() { return request.auth != null; }
+    function incoming() { return request.resource.data; }
+    function existing() { return resource.data; }
+    function isValidId(id) { return id is string && id.size() <= 128 && id.matches('^[a-zA-Z0-9_\\-]+$'); }
+    
+    // --- Validation Helpers ---
+
+    function isValidCustomer(data) {
+      return data.keys().hasAll(['name', 'phone1']) &&
+             data.name is string &&
+             data.phone1 is string;
+    }
+
+    function isValidInvoice(data) {
+      return data.keys().hasAll(['invoiceNumber', 'customerId', 'customerName', 'currency', 'totalCost', 'amountPaid', 'status']) &&
+             data.invoiceNumber is string &&
+             data.customerId is string && 
+             data.totalCost is number && 
+             data.amountPaid is number && 
+             data.status in ['new', 'in_progress', 'ready', 'delivered'];
+    }
+
+    function isValidInvoiceItem(data) {
+      return data.keys().hasAll(['invoiceId', 'deviceType', 'quantity', 'cost', 'status']) &&
+             data.invoiceId is string &&
+             data.deviceType is string &&
+             data.quantity is number &&
+             data.cost is number &&
+             data.status in ['new', 'inspected', 'testing', 'repairing', 'ready', 'unrepairable', 'delivered', 'intact', 'refused'];
+    }
+
+    function isValidVaultTransaction(data) {
+      return data.keys().hasAll(['currency', 'amount', 'invoiceNumber', 'userName', 'userId', 'timestamp']) &&
+             data.currency is string &&
+             data.amount is number &&
+             data.invoiceNumber is string &&
+             data.userName is string &&
+             data.userId is string;
+    }
+
+    // --- Matches ---
+
+    match /customers/{customerId} {
+      allow read: if true;
+      allow create: if isValidCustomer(incoming());
+      allow update: if isValidCustomer(incoming());
+      allow delete: if true;
+    }
+
+    match /invoices/{invoiceId} {
+      allow read: if true;
+      allow create: if isValidInvoice(incoming());
+      allow update: if isValidInvoice(incoming());
+      allow delete: if true;
+    }
+
+    match /invoice_items/{itemId} {
+      allow read: if true;
+      allow create: if isValidInvoiceItem(incoming());
+      allow update: if isValidInvoiceItem(incoming());
+      allow delete: if true;
+    }
+
+    match /vault_transactions/{txId} {
+      allow read: if true;
+      allow create: if isValidVaultTransaction(incoming());
+      allow update: if isValidVaultTransaction(incoming());
+      allow delete: if true;
+    }
+
+    match /currencies/{id} {
+      allow read, write: if true;
+    }
+
+    match /device_types/{id} {
+      allow read, write: if true;
+    }
+
+    match /settings/{docId} {
+      allow read: if true;
+      allow write: if true;
+    }
+
+    match /users/{userId} {
+      allow read, write: if true;
+    }
+
+    match /engineers/{engineerId} {
+      allow read, write: if true;
+    }
+
+    match /maintenance_actions/{actionId} {
+      allow read, write: if true;
+    }
+
+    match /test/{docId} {
+      allow get: if true; // For connection testing
+    }
+  }
+}
