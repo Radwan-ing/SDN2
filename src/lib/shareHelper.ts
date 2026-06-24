@@ -35,7 +35,7 @@ export async function sharePdfFile(blob: Blob, filename: string, message: string
       await Share.share({
         title: 'مشاركة الملف',
         text: message,
-        url: writeResult.uri,
+        files: [writeResult.uri],
         dialogTitle: 'مشاركة عبر',
       });
       

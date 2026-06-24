@@ -1,5 +1,5 @@
 import React, { useState } from 'react';
-import { Settings as SettingsIcon, Wrench, Search, ArrowLeft, Clock, ChevronLeft } from 'lucide-react';
+import { Settings as SettingsIcon, Wrench, ClipboardCheck, ArrowLeft, Clock, ChevronLeft } from 'lucide-react';
 import { useTranslation } from 'react-i18next';
 import { User } from '../../types';
 import Inspection from './Inspection';
@@ -16,7 +16,7 @@ export default function DeviceMovement({ user, onBack }: { user: User, onBack: (
       id: 'inspection', 
       title: t('movement.inspection', 'Inspection Action'), 
       desc: 'Review incoming devices and diagnose problems.',
-      icon: Search, 
+      icon: ClipboardCheck, 
       color: 'text-purple-500', 
       bg: 'bg-purple-500/10' 
     },

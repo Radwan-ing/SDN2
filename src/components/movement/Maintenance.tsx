@@ -617,7 +617,7 @@ export default function Maintenance({ user, onBack, initialInvoice }: { user: Us
               <div className="flex justify-between items-start border-b-2 border-gray-900 pb-4 mb-4">
                 {/* Right Corner: Shop Name */}
                 <div className="text-right flex-1 pt-1">
-                  <h2 className="text-xl font-black text-gray-900 tracking-tight leading-tight font-cairo">{shopConfig?.shopName || 'عالم الصيانة والتجارة'}</h2>
+                  <h2 className="text-xl font-black text-gray-900 tracking-tight leading-tight font-cairo whitespace-nowrap">{shopConfig?.shopName || 'عالم الصيانة والتجارة'}</h2>
                   <div className="text-sm font-black text-gray-900 tracking-tight leading-tight mt-1.5 font-cairo">قسم الصيانة</div>
                   <div className="mt-2 space-y-1">
                     {(shopConfig?.phone1 || shopConfig?.phone2) && (
@@ -917,25 +917,25 @@ export default function Maintenance({ user, onBack, initialInvoice }: { user: Us
                  <div className="flex flex-row items-center gap-3">
                    <label className="text-sm text-gray-400 font-bold whitespace-nowrap w-24 shrink-0">الكمية</label>
                    <input 
-                     type="number"
-                     min="1" step="1"
-                     dir="ltr"
-                     lang="en"
-                     onFocus={e => e.target.select()}
-                     max={currentFormRow.id ? getAvailableQuantity(currentFormRow.id, editingIndex !== null ? editingIndex : -1) : 1}
-                     value={Number.isNaN(Number(currentFormRow.count)) ? '' : currentFormRow.count}
-                     onKeyDown={e => { if (e.key === '.' || e.key === ',' || e.key === '-' || e.key === '+' || e.key === 'e' || e.key === 'E') e.preventDefault(); }}
-                     onChange={e => {
-                       let val = e.target.value === '' ? '' : parseInt(e.target.value);
-                       if (typeof val === 'number') {
-                         const max = currentFormRow.id ? getAvailableQuantity(currentFormRow.id, editingIndex !== null ? editingIndex : -1) : 1;
-                         if (val < 1) val = 1;
-                         if (val > max) val = max;
-                       }
-                       handleUpdateCurrentForm('count', val);
-                     }}
-                     className="w-16 bg-black/40 border border-white/10 px-2 py-1.5 focus:border-orange-500 outline-none transition-all text-center rounded-lg text-xs font-bold text-white font-mono"
-                   />
+                      type="text"
+                      inputMode="numeric"
+                      pattern="[0-9]*"
+                      dir="ltr"
+                      lang="en"
+                      onFocus={e => e.target.select()}
+                      value={Number.isNaN(Number(currentFormRow.count)) ? '' : currentFormRow.count}
+                      onChange={e => {
+                        const raw = e.target.value.replace(/[^0-9]/g, '');
+                        let val = raw === '' ? '' : parseInt(raw);
+                        if (typeof val === 'number') {
+                          const max = currentFormRow.id ? getAvailableQuantity(currentFormRow.id, editingIndex !== null ? editingIndex : -1) : 1;
+                          if (val < 1) val = 1;
+                          if (val > max) val = max;
+                        }
+                        handleUpdateCurrentForm('count', val);
+                      }}
+                      className="w-16 bg-black/40 border border-white/10 px-2 py-1.5 focus:border-orange-500 outline-none transition-all text-center rounded-lg text-xs font-bold text-white font-mono"
+                    />
                  </div>
                  <label className="flex items-center gap-2 cursor-pointer">
                     <input 

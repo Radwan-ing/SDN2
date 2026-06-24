@@ -474,7 +474,7 @@ export default function MaintenanceActionForm({
             <div className="flex justify-between items-start border-b-2 border-gray-900 pb-4 mb-4">
               {/* Right Corner: Shop Name */}
               <div className="text-right flex-1 pt-1">
-                <h2 className="text-xl font-black text-gray-900 tracking-tight leading-tight font-cairo">{shopConfig?.shopName || 'عالم الصيانة والتجارة'}</h2>
+                <h2 className="text-xl font-black text-gray-900 tracking-tight leading-tight font-cairo whitespace-nowrap">{shopConfig?.shopName || 'عالم الصيانة والتجارة'}</h2>
                 <div className="text-sm font-black text-gray-900 tracking-tight leading-tight mt-1.5 font-cairo">قسم الصيانة</div>
                 <div className="mt-2 space-y-1">
                   {(shopConfig?.phone1 || shopConfig?.phone2) && (
@@ -752,17 +752,23 @@ export default function MaintenanceActionForm({
                      <div className="w-full md:w-20">
                         <label className="text-[10px] text-gray-500 uppercase font-black mb-0.5 block">{t('inventory.quantity')}</label>
                         <input 
-                           type="number"
-                           min="1"
-                           dir="ltr"
-                           lang="en"
-                           onFocus={e => e.target.select()}
-                           max={selectedItem ? (Number(selectedItem.quantity) || 1) : 1}
-                           value={itemRow.quantity === 0 ? '' : itemRow.quantity}
-                           onChange={(e) => updateActionItem(index, 'quantity', parseInt(e.target.value) || 0)}
-                           disabled={!selectedItem}
-                           className="w-full bg-transparent border border-white/10 rounded-md px-2 py-1.5 outline-none focus:border-orange-500 disabled:opacity-50 text-xs font-bold text-center"
-                        />
+                            type="text"
+                            inputMode="numeric"
+                            pattern="[0-9]*"
+                            dir="ltr"
+                            lang="en"
+                            onFocus={e => e.target.select()}
+                            value={itemRow.quantity === 0 ? '' : itemRow.quantity}
+                            onChange={(e) => {
+                              const raw = e.target.value.replace(/[^0-9]/g, '');
+                              const val = parseInt(raw) || 0;
+                              const max = selectedItem ? (Number(selectedItem.quantity) || 1) : 1;
+                              const sanitizedVal = Math.min(max, Math.max(1, val));
+                              updateActionItem(index, 'quantity', sanitizedVal);
+                            }}
+                            disabled={!selectedItem}
+                            className="w-full bg-transparent border border-white/10 rounded-md px-2 py-1.5 outline-none focus:border-orange-500 disabled:opacity-50 text-xs font-bold text-center font-mono"
+                         />
                      </div>
                      <div className="flex items-end">
                        <button 

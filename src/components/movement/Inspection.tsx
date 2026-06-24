@@ -4,7 +4,7 @@ import { collection, onSnapshot, doc, writeBatch, serverTimestamp, getDoc } from
 import { db } from '../../firebase';
 import { Invoice, InvoiceItem, User, Customer } from '../../types';
 import { useTranslation } from 'react-i18next';
-import { Search, ArrowLeft, ArrowUpRight, Search as SearchIcon, HardDrive, User as UserIcon, Settings, Plus, Save, Loader2, DollarSign, X, Check, AlertTriangle, Printer, Phone, Smartphone, MessageCircle, MapPin, Facebook } from 'lucide-react';
+import { Search, ArrowLeft, ArrowUpRight, Search as SearchIcon, ClipboardCheck, HardDrive, User as UserIcon, Settings, Plus, Save, Loader2, DollarSign, X, Check, AlertTriangle, Printer, Phone, Smartphone, MessageCircle, MapPin, Facebook } from 'lucide-react';
 import { motion, AnimatePresence } from 'motion/react';
 import BankAccountsFooter from '../BankAccountsFooter';
 import jsPDF from 'jspdf';
@@ -977,8 +977,8 @@ export default function Inspection({ user, onBack, initialInvoice }: { user: Use
                   <div className="flex justify-between items-start border-b-2 border-gray-900 pb-4 mb-4">
                     {/* Right Corner: Shop Name */}
                     <div className="text-right flex-1 pt-1">
-                      <h2 className="text-xl font-black text-gray-900 tracking-tight leading-tight font-cairo">{shopConfig?.shopName || 'عالم الصيانة والتجارة'}</h2>
-                      <div className="text-sm font-black text-gray-900 tracking-tight leading-tight mt-1.5 font-cairo">قسم الصيانة والتعديل</div>
+                      <h2 className="text-xl font-black text-gray-900 tracking-tight leading-tight font-cairo whitespace-nowrap">{shopConfig?.shopName || 'عالم الصيانة والتجارة'}</h2>
+                      <div className="text-sm font-black text-gray-900 tracking-tight leading-tight mt-1.5 font-cairo whitespace-nowrap">قسم الصيانة والتعديل</div>
                       <div className="mt-2 space-y-1">
                         {(shopConfig?.phone1 || shopConfig?.phone2) && (
                           <div className="text-[10px] font-bold text-gray-800 flex items-center justify-start gap-1.5 w-fit">
@@ -1158,17 +1158,17 @@ export default function Inspection({ user, onBack, initialInvoice }: { user: Use
                     if (activeCounters.length === 0) return null;
 
                     return (
-                      <div className="flex items-center gap-4 mb-4 text-sm font-bold text-gray-900 mt-6 flex-wrap">
+                      <div className="block mt-6 mb-4 text-sm font-bold text-gray-900 text-right overflow-visible">
                         {activeCounters.map((counter, index) => (
-                          <span key={counter.key} className="flex items-center gap-4">
-                            {index > 0 && <span className="text-gray-400 font-normal">|</span>}
-                            <div className="flex items-center gap-2">
+                          <div key={counter.key} className="inline-flex items-center gap-2 ml-6 mb-2">
+                            {index > 0 && <span className="text-gray-400 font-normal ml-2">|</span>}
+                            <div className="inline-flex items-center gap-2">
                               <div className={`w-12 h-8 border-2 border-gray-400 bg-gray-50 rounded flex items-center justify-center font-mono font-black text-base ${counter.textColor}`}>
                                 {counter.value}
                               </div>
                               <span>{counter.label}</span>
                             </div>
-                          </span>
+                          </div>
                         ))}
                       </div>
                     );
@@ -1234,7 +1234,7 @@ export default function Inspection({ user, onBack, initialInvoice }: { user: Use
               <ArrowLeft size={18} className="rtl:rotate-180" />
             </button>
             <h1 className="text-lg font-black text-white m-0 p-0 flex items-center gap-2">
-              <SearchIcon size={18} className="text-purple-500" />
+              <ClipboardCheck size={18} className="text-purple-500" />
               فحص - #{selectedInvoice.invoiceNumber}
             </h1>
           </div>
@@ -1394,32 +1394,37 @@ export default function Inspection({ user, onBack, initialInvoice }: { user: Use
                  <div className={`flex flex-row items-center gap-4 transition-opacity ${currentActionItem.decision !== 'repairing' ? 'opacity-50 pointer-events-none' : ''} w-full md:w-auto`}>
                    <div className="flex items-center gap-2 flex-1 md:flex-none">
                      <label className="text-xs text-gray-500 whitespace-nowrap">التكلفة للوحدة</label>
-                     <input 
-                       type="number"
-                       min="0"
-                       dir="ltr"
-                       lang="en"
-                       value={Number.isNaN(Number(currentActionItem.unitCost)) ? '' : currentActionItem.unitCost} onFocus={e => e.target.select()}
-                       onChange={e => handleUpdateCurrentField('unitCost', e.target.value === '' ? '' : Math.max(0, parseFloat(e.target.value)))}
-                       className="w-full md:w-24 bg-black/40 border border-white/10 px-3 py-2 focus:border-purple-500 outline-none transition-all rounded-xl"
-                     />
-                   </div>
-                   
-                   <div className="flex items-center gap-2 flex-1 md:flex-none">
-                     <label className="text-xs text-gray-500 whitespace-nowrap">الإجمالي</label>
-                     <input 
-                       type="number"
-                       disabled
-                       readOnly
-                       dir="ltr"
-                       lang="en"
-                       value={currentActionItem.cost}
-                       className="w-full md:w-24 bg-black/20 border border-white/5 px-3 py-2 text-purple-400 font-bold outline-none cursor-not-allowed rounded-xl"
-                     />
-                   </div>
-                 </div>
-              </div>
-
+                      <input 
+                        type="text"
+                        inputMode="decimal"
+                        dir="ltr"
+                        lang="en"
+                        value={Number.isNaN(Number(currentActionItem.unitCost)) ? '' : currentActionItem.unitCost} 
+                        onFocus={e => e.target.select()}
+                        onChange={e => {
+                          const val = e.target.value.replace(/[^0-9.]/g, '');
+                          const parts = val.split('.');
+                          const sanitized = parts[0] + (parts.length > 1 ? '.' + parts.slice(1).join('') : '');
+                          handleUpdateCurrentField('unitCost', sanitized === '' ? '' : parseFloat(sanitized));
+                        }}
+                        className="w-full md:w-24 bg-black/40 border border-white/10 px-3 py-2 focus:border-purple-500 outline-none transition-all rounded-xl font-mono text-center"
+                      />
+                    </div>
+                    
+                    <div className="flex items-center gap-2 flex-1 md:flex-none">
+                      <label className="text-xs text-gray-500 whitespace-nowrap">الإجمالي</label>
+                      <input 
+                        type="text"
+                        disabled
+                        readOnly
+                        dir="ltr"
+                        lang="en"
+                        value={currentActionItem.cost || 0}
+                        className="w-full md:w-24 bg-black/20 border border-white/5 px-3 py-2 text-purple-400 font-bold outline-none cursor-not-allowed rounded-xl font-mono text-center"
+                      />
+                    </div>
+                  </div>
+               </div>
               <div className="flex items-start gap-3 w-full">
                 <label className="text-xs text-gray-500 whitespace-nowrap w-20 mt-3">تقرير المهندس</label>
                 <textarea 

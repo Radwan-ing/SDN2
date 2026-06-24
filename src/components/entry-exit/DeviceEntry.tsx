@@ -681,7 +681,7 @@ export default function DeviceEntry({ onBack, user }: { onBack: () => void, user
               <div className="flex justify-between items-start border-b-2 border-gray-900 pb-4 mb-4">
                 {/* Right Corner: Shop Name */}
                 <div className="text-right flex-1 pt-1">
-                  <h2 className="text-xl font-black text-gray-900 tracking-tight leading-tight font-cairo">{shopConfig?.shopName || 'عالم الصيانة والتجارة'}</h2>
+                  <h2 className="text-xl font-black text-gray-900 tracking-tight leading-tight font-cairo whitespace-nowrap">{shopConfig?.shopName || 'عالم الصيانة والتجارة'}</h2>
                   <div className="text-sm font-black text-gray-900 tracking-tight leading-tight mt-1.5 font-cairo">قسم الصيانة</div>
                   <div className="mt-2 space-y-1">
                     {(shopConfig?.phone1 || shopConfig?.phone2) && (

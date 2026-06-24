@@ -396,7 +396,7 @@ export default function PrintPreviewOverlay({
           <div className="flex justify-between items-start border-b-2 border-gray-900 pb-4 mb-4">
             {/* Right Corner: Shop Name */}
             <div className="text-right flex-1 pt-1">
-              <h2 className="text-xl font-black text-gray-900 tracking-tight leading-tight font-cairo cursor-default">{shopConfig?.shopName || 'عالم الصيانة والتجارة'}</h2>
+              <h2 className="text-xl font-black text-gray-900 tracking-tight leading-tight font-cairo whitespace-nowrap cursor-default">{shopConfig?.shopName || 'عالم الصيانة والتجارة'}</h2>
               <div className="text-sm font-black text-gray-900 tracking-tight leading-tight mt-1.5 font-cairo cursor-default">
                 {type === 'invoice' ? 'قسم الصيانة الفنية' : 'قسم الحسابات والمالية'}
               </div>
