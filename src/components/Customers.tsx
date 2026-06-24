@@ -1,3 +1,4 @@
+import { sharePdfFile } from '../lib/shareHelper';
 import React, { useState, useEffect } from 'react';
 import { motion } from 'motion/react';
 import { collection, onSnapshot, query, orderBy, doc, getDoc, setDoc, updateDoc, writeBatch, serverTimestamp } from '../firebase';
@@ -642,9 +643,9 @@ export default function Customers({ user, onBack }: { user: SystemUser; onBack?:
 
       let statusText = '';
       if (diff < -0.01) {
-        statusText = `رصيد دائن للعميل بفائض: ${Math.abs(diff).toLocaleString()} ${currency}`;
+        statusText = `رصيد دائن للعميل بفائض: ${Math.abs(diff).toLocaleString('en-US')} ${currency}`;
       } else if (diff > 0.01) {
-        statusText = `متبقي عليه كديون متراكمة: ${Math.abs(diff).toLocaleString()} ${currency}`;
+        statusText = `متبقي عليه كديون متراكمة: ${Math.abs(diff).toLocaleString('en-US')} ${currency}`;
       } else {
         statusText = `الحساب متزن بالكامل (0.00)`;
       }
@@ -653,25 +654,15 @@ export default function Customers({ user, onBack }: { user: SystemUser; onBack?:
       message += `عزيزي العميل *${cust.name}*،\n`;
       message += `تجدون أدناه ملخصاً مالياً بالعمليات والدفوعات المسجلة لصيانتكم. كما تم تنزيل وحفظ مستند الـ PDF للتقرير في مجلد قاعدة البيانات.\n\n`;
       message += `- *الرصيد الصافي:* ${statusText}\n`;
-      message += `- *إجمالي مستحقات الصيانة:* ${totalCost.toLocaleString()} ${currency}\n`;
-      message += `- *إجمالي السندات والمقبوضات:* ${totalPaid.toLocaleString()} ${currency}\n\n`;
+      message += `- *إجمالي مستحقات الصيانة:* ${totalCost.toLocaleString('en-US')} ${currency}\n`;
+      message += `- *إجمالي السندات والمقبوضات:* ${totalPaid.toLocaleString('en-US')} ${currency}\n\n`;
       message += `يرجى مشاركة وإرسال كشف مستند الـ PDF المحفوظ الآن بنجاح على جهازكم.`;
 
       // Native Share API if supported (to attach actual PDF sheet on mobile)
       let sharedNatively = false;
       try {
-        if (navigator.share && navigator.canShare) {
-          const pdfBlob = pdf.output('blob');
-          const file = new File([pdfBlob], filename, { type: 'application/pdf' });
-          if (navigator.canShare({ files: [file] })) {
-            await navigator.share({
-              files: [file],
-              title: filename,
-              text: message,
-            });
-            sharedNatively = true;
-          }
-        }
+        const pdfBlob = pdf.output('blob');
+        sharedNatively = await sharePdfFile(pdfBlob, filename, message);
       } catch (shareErr) {
         console.warn('Native share was skipped:', shareErr);
       }
@@ -1890,13 +1881,13 @@ export default function Customers({ user, onBack }: { user: SystemUser; onBack?:
                                       {entry.notes && <div className="text-[10px] text-gray-600 truncate mt-0.5">{entry.notes}</div>}
                                     </td>
                                     <td className="py-2.5 px-4 font-mono font-black text-rose-800 text-center border-l border-gray-400 bg-rose-50/5">
-                                      {entry.debit > 0 ? `${entry.debit.toLocaleString()}` : '---'}
+                                      {entry.debit > 0 ? `${entry.debit.toLocaleString('en-US')}` : '---'}
                                     </td>
                                     <td className="py-2.5 px-4 font-mono font-black text-emerald-800 text-center border-l border-gray-400 bg-emerald-50/5">
-                                      {entry.credit > 0 ? `${entry.credit.toLocaleString()}` : '---'}
+                                      {entry.credit > 0 ? `${entry.credit.toLocaleString('en-US')}` : '---'}
                                     </td>
                                     <td className={`py-2.5 px-4 font-mono font-black text-center ${entry.runningBalance > 0.01 ? 'text-rose-800' : entry.runningBalance < -0.01 ? 'text-emerald-800' : 'text-gray-600'}`}>
-                                      {entry.runningBalance.toLocaleString()} {arCurrency}
+                                      {entry.runningBalance.toLocaleString('en-US')} {arCurrency}
                                     </td>
                                   </tr>
                                 );
@@ -1923,15 +1914,15 @@ export default function Customers({ user, onBack }: { user: SystemUser; onBack?:
                           <div className="grid grid-cols-3 gap-2 border-t border-b border-gray-300 py-2.5 my-1.5 text-center">
                             <div>
                               <div className="text-[9px] text-gray-500 font-bold">إجمالي المطالبات (مدين)</div>
-                              <div className="text-sm font-black font-mono text-rose-800 mt-0.5">{totalCost.toLocaleString()} {arCurrency}</div>
+                              <div className="text-sm font-black font-mono text-rose-800 mt-0.5">{totalCost.toLocaleString('en-US')} {arCurrency}</div>
                             </div>
                             <div className="border-r border-l border-gray-300">
                               <div className="text-[9px] text-gray-500 font-bold">إجمالي المقبوضات (دائن)</div>
-                              <div className="text-sm font-black font-mono text-emerald-800 mt-0.5">{totalPaid.toLocaleString()} {arCurrency}</div>
+                              <div className="text-sm font-black font-mono text-emerald-800 mt-0.5">{totalPaid.toLocaleString('en-US')} {arCurrency}</div>
                             </div>
                             <div>
                               <div className="text-[9px] text-gray-500 font-bold">صافي المتبقي بالجاري</div>
-                              <div className="text-sm font-black font-mono text-gray-950 mt-0.5">{Math.abs(diff).toLocaleString()} {arCurrency}</div>
+                              <div className="text-sm font-black font-mono text-gray-950 mt-0.5">{Math.abs(diff).toLocaleString('en-US')} {arCurrency}</div>
                             </div>
                           </div>
                           <div className="text-xs font-black text-gray-900">

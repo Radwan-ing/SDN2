@@ -1,3 +1,4 @@
+import { sharePdfFile } from '../lib/shareHelper';
 import React, { useEffect, useState } from 'react';
 import { useTranslation } from 'react-i18next';
 import { localDb } from '../lib/local-db';
@@ -1139,9 +1140,9 @@ export default function Vault({ user, onBack }: { user: User; onBack: () => void
 
       let statusText = '';
       if (diff < -0.01) {
-        statusText = `رصيد دائن للعميل بفائض: ${Math.abs(diff).toLocaleString()} ${currency}`;
+        statusText = `رصيد دائن للعميل بفائض: ${Math.abs(diff).toLocaleString('en-US')} ${currency}`;
       } else if (diff > 0.01) {
-        statusText = `متبقي عليه كديون متراكمة: ${Math.abs(diff).toLocaleString()} ${currency}`;
+        statusText = `متبقي عليه كديون متراكمة: ${Math.abs(diff).toLocaleString('en-US')} ${currency}`;
       } else {
         statusText = `الحساب متزن بالكامل (0.00)`;
       }
@@ -1150,25 +1151,15 @@ export default function Vault({ user, onBack }: { user: User; onBack: () => void
       message += `عزيزي العميل *${cust.name}*،\n`;
       message += `تجدون أدناه الملخص المالي لحسابات الخزينة وقسم الصيانة والقيود المسجلة لدينا. كما تم تنزيل وحفظ مستند الـ PDF للتقرير في مجلد قاعدة البيانات.\n\n`;
       message += `- *الرصيد الصافي:* ${statusText}\n`;
-      message += `- *إجمالي قيمة صيانة الأجهزة المقبولة:* ${totalCost.toLocaleString()} ${currency}\n`;
-      message += `- *إجمالي المقبوضات والسندات:* ${totalPaid.toLocaleString()} ${currency}\n\n`;
+      message += `- *إجمالي قيمة صيانة الأجهزة المقبولة:* ${totalCost.toLocaleString('en-US')} ${currency}\n`;
+      message += `- *إجمالي المقبوضات والسندات:* ${totalPaid.toLocaleString('en-US')} ${currency}\n\n`;
       message += `يرجى مشاركة وإرسال كشف مستند الـ PDF المحفوظ الآن بنجاح على جهازكم.`;
 
       // Native Share API if supported (to attach actual PDF sheet on mobile)
       let sharedNatively = false;
       try {
-        if (navigator.share && navigator.canShare) {
-          const pdfBlob = pdf.output('blob');
-          const file = new File([pdfBlob], filename, { type: 'application/pdf' });
-          if (navigator.canShare({ files: [file] })) {
-            await navigator.share({
-              files: [file],
-              title: filename,
-              text: message,
-            });
-            sharedNatively = true;
-          }
-        }
+        const pdfBlob = pdf.output('blob');
+        sharedNatively = await sharePdfFile(pdfBlob, filename, message);
       } catch (shareErr) {
         console.warn('Native share was skipped:', shareErr);
       }
@@ -1586,7 +1577,7 @@ export default function Vault({ user, onBack }: { user: User; onBack: () => void
                                </span>
                             </td>
                             <td className={`px-4 py-2.5 text-center font-bold text-xs ${activeSegment === 'receipt' ? 'text-emerald-500' : 'text-rose-500'}`}>
-                              {Math.abs(tx.amount).toLocaleString()} <span className="text-[9px] opacity-70 font-sans">{tx.currency}</span>
+                              {Math.abs(tx.amount).toLocaleString('en-US')} <span className="text-[9px] opacity-70 font-sans">{tx.currency}</span>
                             </td>
                             <td className="px-4 py-2.5 text-left text-gray-500 font-mono italic">
                               {new Date(tx.timestamp).toLocaleString('ar-YE', { day: '2-digit', month: '2-digit', year: 'numeric' })}
@@ -2279,7 +2270,7 @@ export default function Vault({ user, onBack }: { user: User; onBack: () => void
                       >
                         <option value="" disabled className="text-gray-600">اختر الصندوق المصدر...</option>
                         {funds.filter(f => f.status === 'active').map(f => (
-                          <option key={f.id} value={f.id} className="bg-[#1c1c1c]">{f.name} ({f.currency}) - الرصيد: {f.balance?.toLocaleString()}</option>
+                          <option key={f.id} value={f.id} className="bg-[#1c1c1c]">{f.name} ({f.currency}) - الرصيد: {f.balance?.toLocaleString('en-US')}</option>
                         ))}
                       </select>
                     </div>
@@ -2298,7 +2289,7 @@ export default function Vault({ user, onBack }: { user: User; onBack: () => void
                       >
                         <option value="" disabled className="text-gray-600">اختر الصندوق الوجهة...</option>
                         {funds.filter(f => f.status === 'active').map(f => (
-                          <option key={f.id} value={f.id} className="bg-[#1c1c1c]">{f.name} ({f.currency}) - الرصيد: {f.balance?.toLocaleString()}</option>
+                          <option key={f.id} value={f.id} className="bg-[#1c1c1c]">{f.name} ({f.currency}) - الرصيد: {f.balance?.toLocaleString('en-US')}</option>
                         ))}
                       </select>
                     </div>
@@ -2417,18 +2408,18 @@ export default function Vault({ user, onBack }: { user: User; onBack: () => void
                       <div className="bg-[#121212] p-3 rounded-xl border border-white/5 grid grid-cols-2 gap-2 text-center">
                         <div>
                           <p className="text-[9px] text-gray-500 font-cairo leading-none">مجموع الواردات</p>
-                          <p className="font-mono text-xs font-bold text-green-400 mt-1">+{inSum.toLocaleString()}</p>
+                          <p className="font-mono text-xs font-bold text-green-400 mt-1">+{inSum.toLocaleString('en-US')}</p>
                         </div>
                         <div className="border-r border-white/5">
                           <p className="text-[9px] text-gray-500 font-cairo leading-none">مجموع النفقات</p>
-                          <p className="font-mono text-xs font-bold text-red-500 mt-1">-{outSum.toLocaleString()}</p>
+                          <p className="font-mono text-xs font-bold text-red-500 mt-1">-{outSum.toLocaleString('en-US')}</p>
                         </div>
                       </div>
 
                       <div className="flex items-center justify-between border-t border-white/5 pt-3">
                         <span className="text-xs text-gray-400 font-cairo">متوفر حالياً بالصندوق:</span>
                         <span className="font-mono text-lg font-black text-emerald-400">
-                          {fund.balance?.toLocaleString()} <span className="text-[11px] font-sans text-gray-500">{fund.currency}</span>
+                          {fund.balance?.toLocaleString('en-US')} <span className="text-[11px] font-sans text-gray-500">{fund.currency}</span>
                         </span>
                       </div>
                     </div>
@@ -2467,7 +2458,7 @@ export default function Vault({ user, onBack }: { user: User; onBack: () => void
                               </span>
                             </td>
                             <td className={`px-4 py-3 text-center font-bold ${tx.type === 'receipt' ? 'text-emerald-500' : 'text-rose-500'}`}>
-                              {Math.abs(tx.amount).toLocaleString()} {tx.currency}
+                              {Math.abs(tx.amount).toLocaleString('en-US')} {tx.currency}
                             </td>
                             <td className="px-4 py-3 text-gray-500 text-left truncate max-w-[200px]">{tx.notes || tx.customerName}</td>
                           </tr>
@@ -2565,19 +2556,19 @@ export default function Vault({ user, onBack }: { user: User; onBack: () => void
                     
                     <div className="bg-[#181818] p-4 rounded-2xl border border-white/5 flex flex-col justify-between">
                       <span className="text-[10px] text-gray-500 font-cairo leading-none">إجمالي الفواتير الصادرة</span>
-                      <p className="font-mono text-lg font-black text-white mt-1.5">{totalInvoicesCost.toLocaleString()} <span className="text-[10px] font-sans text-gray-500">USD</span></p>
+                      <p className="font-mono text-lg font-black text-white mt-1.5">{totalInvoicesCost.toLocaleString('en-US')} <span className="text-[10px] font-sans text-gray-500">USD</span></p>
                       <span className="text-[9px] text-gray-600 font-cairo mt-1">عدد الفواتير المنقولة: {ledgerCustomerInvoices.length}</span>
                     </div>
 
                     <div className="bg-[#181818] p-4 rounded-2xl border border-white/5 flex flex-col justify-between">
                       <span className="text-[10px] text-gray-500 font-cairo leading-none font-bold text-green-400">مجموع المبالغ المسددة</span>
-                      <p className="font-mono text-lg font-black text-green-400 mt-1.5">{(totalInvoicesPaid + totalSeparateCollections).toLocaleString()} <span className="text-[10px] font-sans text-gray-500">USD</span></p>
+                      <p className="font-mono text-lg font-black text-green-400 mt-1.5">{(totalInvoicesPaid + totalSeparateCollections).toLocaleString('en-US')} <span className="text-[10px] font-sans text-gray-500">USD</span></p>
                       <span className="text-[9px] text-gray-500 font-cairo mt-1">مسدد بالفاتورة: {totalInvoicesPaid} + قبض مستقل: {totalSeparateCollections}</span>
                     </div>
 
                     <div className="bg-[#181818] p-4 rounded-2xl border border-white/5 flex flex-col justify-between">
                       <span className="text-[10px] text-gray-500 font-cairo leading-none font-bold text-red-500">صافي المديونية المتبقية</span>
-                      <p className="font-mono text-lg font-black text-red-500 mt-1.5">{customerUnpaidBalance.toLocaleString()} <span className="text-[10px] font-sans text-gray-500">USD</span></p>
+                      <p className="font-mono text-lg font-black text-red-500 mt-1.5">{customerUnpaidBalance.toLocaleString('en-US')} <span className="text-[10px] font-sans text-gray-500">USD</span></p>
                       <span className="text-[9px] text-gray-600 font-cairo mt-1">مستحق للمركز حالياً دائن</span>
                     </div>
 
@@ -2605,9 +2596,9 @@ export default function Vault({ user, onBack }: { user: User; onBack: () => void
                             return (
                               <tr key={inv.id} className="hover:bg-white/5 font-mono text-[11px]">
                                 <td className="py-2.5 px-3 text-white font-bold">{inv.invoiceNumber}</td>
-                                <td className="py-2.5 px-3">{actualCost?.toLocaleString()} {inv.currency}</td>
-                                <td className="py-2.5 px-3 text-green-400">{inv.amountPaid?.toLocaleString()} {inv.currency}</td>
-                                <td className="py-2.5 px-3 text-red-500 font-bold">{unpaid.toLocaleString()} {inv.currency}</td>
+                                <td className="py-2.5 px-3">{actualCost?.toLocaleString('en-US')} {inv.currency}</td>
+                                <td className="py-2.5 px-3 text-green-400">{inv.amountPaid?.toLocaleString('en-US')} {inv.currency}</td>
+                                <td className="py-2.5 px-3 text-red-500 font-bold">{unpaid.toLocaleString('en-US')} {inv.currency}</td>
                                 <td className="py-2.5 px-3 text-center font-cairo">
                                   <span className={`px-2 py-0.5 rounded text-[9px] font-bold ${inv.status === 'delivered' ? 'bg-green-600/15 text-green-400' : 'bg-amber-600/15 text-amber-500'}`}>
                                     {inv.status}
@@ -2638,12 +2629,12 @@ export default function Vault({ user, onBack }: { user: User; onBack: () => void
                               <span className="text-[10px] text-amber-500 font-cairo">({tx.transactionCategory})</span>
                             </div>
                             <p className="text-[10px] text-gray-500 font-cairo">{tx.notes || 'سند قبض معلق بالدفاتر.'}</p>
-                            <span className="text-[9px] text-gray-600 font-mono">{new Date(tx.timestamp?.toDate ? tx.timestamp.toDate() : tx.timestamp).toLocaleString()}</span>
+                            <span className="text-[9px] text-gray-600 font-mono">{new Date(tx.timestamp?.toDate ? tx.timestamp.toDate() : tx.timestamp).toLocaleString('en-US')}</span>
                           </div>
                           
                           <div className="text-left font-mono">
                             <span className={`text-sm font-black ${tx.type === 'receipt' ? 'text-green-500' : 'text-amber-500'}`}>
-                              {tx.type === 'receipt' ? '+' : '-'}{Math.abs(tx.amount).toLocaleString()} {tx.currency}
+                              {tx.type === 'receipt' ? '+' : '-'}{Math.abs(tx.amount).toLocaleString('en-US')} {tx.currency}
                             </span>
                             <p className="text-[9px] text-gray-500 font-cairo mt-0.5">{tx.fundName}</p>
                           </div>
@@ -2700,7 +2691,7 @@ export default function Vault({ user, onBack }: { user: User; onBack: () => void
                       return (
                         <div key={curr} className="bg-green-600/10 border border-green-500/15 p-4 rounded-2xl">
                           <span className="text-[10px] text-green-400 font-cairo">وارد الإيرادات المتراكمة</span>
-                          <p className="font-mono text-xl font-black text-white mt-1">{sum.toLocaleString()} <span className="text-xs text-green-400">{curr}</span></p>
+                          <p className="font-mono text-xl font-black text-white mt-1">{sum.toLocaleString('en-US')} <span className="text-xs text-green-400">{curr}</span></p>
                         </div>
                       );
                     })}
@@ -2725,11 +2716,11 @@ export default function Vault({ user, onBack }: { user: User; onBack: () => void
                           {receiptTransactions.map(tx => (
                             <tr key={tx.id} className="hover:bg-white/5">
                               <td className="py-2.5 px-3 text-white font-bold">{tx.voucherNumber}</td>
-                              <td className="py-2.5 px-3 font-sans text-[10px]">{new Date(tx.timestamp?.toDate ? tx.timestamp.toDate() : tx.timestamp).toLocaleString()}</td>
+                              <td className="py-2.5 px-3 font-sans text-[10px]">{new Date(tx.timestamp?.toDate ? tx.timestamp.toDate() : tx.timestamp).toLocaleString('en-US')}</td>
                               <td className="py-2.5 px-3 text-emerald-400 font-cairo">{tx.transactionCategory}</td>
                               <td className="py-2.5 px-3 font-cairo">{tx.customerName}</td>
                               <td className="py-2.5 px-3 font-cairo">{tx.fundName}</td>
-                              <td className="py-2.5 px-3 text-left font-bold text-green-400 font-mono">+{Math.abs(tx.amount).toLocaleString()} {tx.currency}</td>
+                              <td className="py-2.5 px-3 text-left font-bold text-green-400 font-mono">+{Math.abs(tx.amount).toLocaleString('en-US')} {tx.currency}</td>
                             </tr>
                           ))}
                           {receiptTransactions.length === 0 && (
@@ -2754,7 +2745,7 @@ export default function Vault({ user, onBack }: { user: User; onBack: () => void
                       return (
                         <div key={curr} className="bg-red-600/10 border border-red-500/15 p-4 rounded-2xl">
                           <span className="text-[10px] text-red-400 font-cairo">إجمالي عموم المدفوعات والمصروفات</span>
-                          <p className="font-mono text-xl font-black text-white mt-1">{sum.toLocaleString()} <span className="text-xs text-red-400">{curr}</span></p>
+                          <p className="font-mono text-xl font-black text-white mt-1">{sum.toLocaleString('en-US')} <span className="text-xs text-red-400">{curr}</span></p>
                         </div>
                       );
                     })}
@@ -2779,11 +2770,11 @@ export default function Vault({ user, onBack }: { user: User; onBack: () => void
                           {paymentTransactions.map(tx => (
                             <tr key={tx.id} className="hover:bg-white/5">
                               <td className="py-2.5 px-3 text-white font-bold">{tx.voucherNumber}</td>
-                              <td className="py-2.5 px-3 font-sans text-[10px]">{new Date(tx.timestamp?.toDate ? tx.timestamp.toDate() : tx.timestamp).toLocaleString()}</td>
+                              <td className="py-2.5 px-3 font-sans text-[10px]">{new Date(tx.timestamp?.toDate ? tx.timestamp.toDate() : tx.timestamp).toLocaleString('en-US')}</td>
                               <td className="py-2.5 px-3 text-amber-500 font-cairo">{tx.transactionCategory}</td>
                               <td className="py-2.5 px-3 font-cairo">{tx.customerName}</td>
                               <td className="py-2.5 px-3 font-cairo">{tx.fundName}</td>
-                              <td className="py-2.5 px-3 text-left font-bold text-red-400 font-mono">-{Math.abs(tx.amount).toLocaleString()} {tx.currency}</td>
+                              <td className="py-2.5 px-3 text-left font-bold text-red-400 font-mono">-{Math.abs(tx.amount).toLocaleString('en-US')} {tx.currency}</td>
                             </tr>
                           ))}
                           {paymentTransactions.length === 0 && (
@@ -2822,7 +2813,7 @@ export default function Vault({ user, onBack }: { user: User; onBack: () => void
                           <div className="text-left">
                             <p className="text-[10px] text-gray-500 font-cairo">صافي ربح الصندوق</p>
                             <p className={`font-mono text-xl font-black ${netProfit >= 0 ? 'text-emerald-400' : 'text-red-500'}`}>
-                              {netProfit >= 0 ? '+' : ''}{netProfit.toLocaleString()} <span className="text-xs text-gray-500">{curr}</span>
+                              {netProfit >= 0 ? '+' : ''}{netProfit.toLocaleString('en-US')} <span className="text-xs text-gray-500">{curr}</span>
                             </p>
                           </div>
                         </div>
@@ -2851,7 +2842,7 @@ export default function Vault({ user, onBack }: { user: User; onBack: () => void
                             <td className="p-3 font-bold font-cairo">{f.name}</td>
                             <td className="p-3 font-cairo">{f.type === 'cash' ? 'نقدي' : 'حساب بنك'}</td>
                             <td className="p-3 font-cairo">{f.currency}</td>
-                            <td className="p-3 text-left font-mono font-black text-emerald-400">{f.balance?.toLocaleString()} {f.currency}</td>
+                            <td className="p-3 text-left font-mono font-black text-emerald-400">{f.balance?.toLocaleString('en-US')} {f.currency}</td>
                           </tr>
                         ))}
                       </tbody>
@@ -2895,7 +2886,7 @@ export default function Vault({ user, onBack }: { user: User; onBack: () => void
                               <td className="py-2.5 px-3 font-bold font-cairo text-white">{cust.name}</td>
                               <td className="py-2.5 px-3 font-cairo text-gray-500">{cust.companyName || 'بدون شركة'}</td>
                               <td className="py-2.5 px-3 font-mono text-gray-400">{cust.phone1 || 'لم يدخل هاتف'}</td>
-                              <td className="py-2.5 px-3 text-left font-bold text-red-500 font-mono">{unpaid.toLocaleString()} USD</td>
+                              <td className="py-2.5 px-3 text-left font-bold text-red-500 font-mono">{unpaid.toLocaleString('en-US')} USD</td>
                             </tr>
                           );
                         })}
@@ -3134,7 +3125,7 @@ export default function Vault({ user, onBack }: { user: User; onBack: () => void
                         <div className="border border-gray-400 p-4 rounded-xl text-center font-cairo bg-white">
                           <div className="text-[11px] font-black text-gray-500 uppercase tracking-wider mb-0.5">صافي الحساب المالي الجاري</div>
                           <div className="text-2xl font-black font-mono text-gray-950 tracking-tight my-1">
-                            {Math.abs(diff).toLocaleString()} <span className="text-sm font-cairo font-bold">{arCurrency}</span>
+                            {Math.abs(diff).toLocaleString('en-US')} <span className="text-sm font-cairo font-bold">{arCurrency}</span>
                           </div>
                           <div className="text-xs font-black text-gray-900">
                             حالة الحساب: {balanceStatus}
@@ -3195,13 +3186,13 @@ export default function Vault({ user, onBack }: { user: User; onBack: () => void
                                       {entry.notes && <div className="text-[10px] text-gray-600 truncate mt-0.5">{entry.notes}</div>}
                                     </td>
                                     <td className="py-2.5 px-4 font-mono font-black text-rose-800 text-center border-l border-gray-400 bg-rose-50/5">
-                                      {entry.debit > 0 ? `${entry.debit.toLocaleString()}` : '---'}
+                                      {entry.debit > 0 ? `${entry.debit.toLocaleString('en-US')}` : '---'}
                                     </td>
                                     <td className="py-2.5 px-4 font-mono font-black text-emerald-800 text-center border-l border-gray-400 bg-emerald-50/5">
-                                      {entry.credit > 0 ? `${entry.credit.toLocaleString()}` : '---'}
+                                      {entry.credit > 0 ? `${entry.credit.toLocaleString('en-US')}` : '---'}
                                     </td>
                                     <td className={`py-2.5 px-4 font-mono font-black text-center ${entry.runningBalance > 0.01 ? 'text-rose-800' : entry.runningBalance < -0.01 ? 'text-emerald-800' : 'text-gray-600'}`}>
-                                      {entry.runningBalance.toLocaleString()} {arCurrency}
+                                      {entry.runningBalance.toLocaleString('en-US')} {arCurrency}
                                     </td>
                                   </tr>
                                 );

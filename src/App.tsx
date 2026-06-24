@@ -13,7 +13,7 @@ import {
   BarChart3, 
   Users, 
   Settings as SettingsIcon, 
-  Search,
+  ClipboardCheck,
   Router,
   Bell,
   LogOut,
@@ -266,7 +266,7 @@ export default function App() {
             <NavItem active={activeTab === 'vault'} onClick={() => setActiveTab('vault')} icon={<CircleDollarSign size={22} />} label={t('common.vault')} />
             <NavItem active={activeTab === 'customers'} onClick={() => setActiveTab('customers')} icon={<Users size={22} />} label={t('common.customers')} />
             <NavItem active={activeTab === 'device-movement'} onClick={() => setActiveTab('device-movement')} icon={<SettingsIcon size={22} />} label={t('common.deviceMovement')} />
-            <NavItem active={activeTab === 'inspection'} onClick={() => setActiveTab('inspection')} icon={<Search size={22} />} label="فحص" />
+            <NavItem active={activeTab === 'inspection'} onClick={() => setActiveTab('inspection')} icon={<ClipboardCheck size={22} />} label="فحص" />
             <NavItem active={activeTab === 'maintenance'} onClick={() => setActiveTab('maintenance')} icon={<Wrench size={22} />} label="صيانة" />
           </nav>
 
@@ -351,7 +351,7 @@ export default function App() {
             <MobileNavItem 
               active={activeTab === 'inspection'} 
               onClick={() => setActiveTab('inspection')} 
-              icon={<Search size={20} />} 
+              icon={<ClipboardCheck size={20} />} 
               label="فحص"
             />
             <div className="relative -top-3">

@@ -1,3 +1,4 @@
+import { sharePdfFile } from '../../lib/shareHelper';
 import React, { useState, useEffect } from 'react';
 import { collection, onSnapshot, doc, writeBatch, serverTimestamp, getDoc } from '../../firebase';
 import { db } from '../../firebase';
@@ -721,29 +722,19 @@ export default function Inspection({ user, onBack, initialInvoice }: { user: Use
       message += `عزيزي العميل *${invoice.customerName}* المحترم،\n`;
       message += `تجد أدناه ملخص تقرير الفحص والتكلفة التقديرية صيانة أجهزتكم الفاتورة رقم *${invoice.invoiceNumber}*:\n\n`;
       message += `- *رقم الفاتورة:* ${invoice.invoiceNumber}\n`;
-      message += `- *القيمة الإجمالية المقدرة:* ${totalInvoiceCost.toLocaleString()} ${currency}\n\n`;
+      message += `- *القيمة الإجمالية المقدرة:* ${totalInvoiceCost.toLocaleString('en-US')} ${currency}\n\n`;
       message += `*جدول الأجهزة وتفاصيل الفحص:*\n`;
       previewItems.forEach((item, index) => {
         message += `\n_${index + 1}. *${item.deviceType} - ${item.deviceName || ''}*_\n`;
         message += `   • تقرير الفحص: ${item.engineerReport || 'قيد المراجعة'}\n`;
-        message += `   • التكلفة: ${(item.cost || item.unitCost || 0).toLocaleString()} ${currency}\n`;
+        message += `   • التكلفة: ${(item.cost || item.unitCost || 0).toLocaleString('en-US')} ${currency}\n`;
       });
       message += `\nيسعدنا تواصلكم الراقي معنا! وبانتظار ردكم للمتابعة.`;
 
       let sharedNatively = false;
       try {
-        if (navigator.share && navigator.canShare) {
-          const pdfBlob = pdf.output('blob');
-          const file = new File([pdfBlob], filename, { type: 'application/pdf' });
-          if (navigator.canShare({ files: [file] })) {
-            await navigator.share({
-              files: [file],
-              title: filename,
-              text: message,
-            });
-            sharedNatively = true;
-          }
-        }
+        const pdfBlob = pdf.output('blob');
+        sharedNatively = await sharePdfFile(pdfBlob, filename, message);
       } catch (shareErr) {
         console.warn('Native share was skipped:', shareErr);
       }
@@ -1103,13 +1094,13 @@ export default function Inspection({ user, onBack, initialInvoice }: { user: Use
                                 {item.engineerReport}
                               </td>
                               <td className="px-3 py-3 text-center font-mono text-gray-900 border-l border-gray-400">
-                                {unitItemCost.toLocaleString()}
+                                {unitItemCost.toLocaleString('en-US')}
                               </td>
                               <td className="px-3 py-3 text-center font-mono text-gray-900 border-l border-gray-400">
                                 {itemQty}
                               </td>
                               <td className="px-3 py-3 text-center font-mono font-black text-gray-900 bg-gray-50">
-                                {totalItemCost.toLocaleString()}
+                                {totalItemCost.toLocaleString('en-US')}
                               </td>
                             </tr>
                           );
@@ -1121,7 +1112,7 @@ export default function Inspection({ user, onBack, initialInvoice }: { user: Use
                             {previewItems.reduce((sum, item) => sum + Number(item.quantity || 1), 0)}
                           </td>
                           <td className="px-3 py-4 text-center font-mono font-black text-xl text-gray-900">
-                            {totalInvoiceCost.toLocaleString()} <span className="text-sm font-sans mr-1">{currencyVal}</span>
+                            {totalInvoiceCost.toLocaleString('en-US')} <span className="text-sm font-sans mr-1">{currencyVal}</span>
                           </td>
                         </tr>
                       </tbody>

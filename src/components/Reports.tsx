@@ -296,7 +296,7 @@ export default function Reports({ onBack }: { onBack?: () => void }) {
     });
     const entries = Object.entries(totals);
     if (entries.length === 0) return '0 USD';
-    return entries.map(([cur, val]) => `${val.toLocaleString()} ${cur}`).join(' / ');
+    return entries.map(([cur, val]) => `${val.toLocaleString('en-US')} ${cur}`).join(' / ');
   };
 
   const getRevenueAwaitingFormatted = () => {
@@ -308,7 +308,7 @@ export default function Reports({ onBack }: { onBack?: () => void }) {
     });
     const entries = Object.entries(totals);
     if (entries.length === 0) return '0 USD';
-    return entries.map(([cur, val]) => `${val.toLocaleString()} ${cur}`).join(' / ');
+    return entries.map(([cur, val]) => `${val.toLocaleString('en-US')} ${cur}`).join(' / ');
   };
 
   const getAverageTicketFormatted = () => {
@@ -323,7 +323,7 @@ export default function Reports({ onBack }: { onBack?: () => void }) {
     const entries = Object.entries(totals);
     return entries.map(([cur, val]) => {
       const avg = val / (counts[cur] || 1);
-      return `${Math.round(avg).toLocaleString()} ${cur}`;
+      return `${Math.round(avg).toLocaleString('en-US')} ${cur}`;
     }).join(' / ');
   };
 
@@ -831,7 +831,7 @@ export default function Reports({ onBack }: { onBack?: () => void }) {
                                 <span className="block text-[10px] text-violet-400 font-bold mt-1 max-w-xs truncate">ملاحظة القطع: {item.failureReason}</span>
                               )}
                             </td>
-                            <td className="py-4 font-mono font-bold text-white text-left px-2">{(Number(item.cost) || 0).toLocaleString()} <span className="text-[10px] text-gray-500 font-black">{itemInvoiceMap.get(String(item.invoiceNumber))?.currency || 'USD'}</span></td>
+                            <td className="py-4 font-mono font-bold text-white text-left px-2">{(Number(item.cost) || 0).toLocaleString('en-US')} <span className="text-[10px] text-gray-500 font-black">{itemInvoiceMap.get(String(item.invoiceNumber))?.currency || 'USD'}</span></td>
                           </tr>
                         ))}
                       </tbody>
@@ -1005,7 +1005,7 @@ export default function Reports({ onBack }: { onBack?: () => void }) {
                               </span>
                               <span className="block text-[10px] italic">{item.engineerReport || item.failureReason || 'لم يدون المهندس المذكرة الفنية'}</span>
                             </td>
-                            <td className="py-4 font-mono font-bold text-emerald-400 text-left px-2">{(Number(item.cost) || 0).toLocaleString()} <span className="text-[10px] text-emerald-600 font-black">{itemInvoiceMap.get(String(item.invoiceNumber))?.currency || 'USD'}</span></td>
+                            <td className="py-4 font-mono font-bold text-emerald-400 text-left px-2">{(Number(item.cost) || 0).toLocaleString('en-US')} <span className="text-[10px] text-emerald-600 font-black">{itemInvoiceMap.get(String(item.invoiceNumber))?.currency || 'USD'}</span></td>
                           </tr>
                         ))}
                       </tbody>

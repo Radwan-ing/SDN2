@@ -1,4 +1,5 @@
 import { useState, useEffect } from 'react';
+import { sharePdfFile } from '../lib/shareHelper';
 import { 
   X, 
   Save, 
@@ -386,13 +387,11 @@ export default function MaintenanceActionForm({
 
               // Assuming we don't have a single specific customer phone to prefill, or we just want to open WA share intent
               let sharedNatively = false;
-              if (navigator.share && navigator.canShare) {
+              try {
                 const pdfBlob = pdf.output('blob');
-                const file = new File([pdfBlob], filename, { type: 'application/pdf' });
-                if (navigator.canShare({ files: [file] })) {
-                   await navigator.share({ files: [file], title: filename, text: message });
-                   sharedNatively = true;
-                }
+                sharedNatively = await sharePdfFile(pdfBlob, filename, message);
+              } catch (err) {
+                console.warn('Native sharing failed:', err);
               }
               if (!sharedNatively) {
                 const encodedMessage = encodeURIComponent(message);

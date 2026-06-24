@@ -1,7 +1,8 @@
-import React, { useState, useEffect } from 'react';
+import React, { useState, useEffect, useRef } from 'react';
 import { ArrowLeft, Printer, Share2, Smartphone, MessageCircle, Phone, Loader2, FileText, Settings2, MapPin, Facebook } from 'lucide-react';
 import { jsPDF } from 'jspdf';
 import html2canvas from 'html2canvas';
+import { sharePdfFile } from '../lib/shareHelper';
 
 type PrintTemplateType = 'entry' | 'exit' | 'inspection' | 'quotation' | 'assignment' | 'maintenance';
 
@@ -19,6 +20,28 @@ export default function PrintPreviewOverlay({
   const [isGeneratingPDF, setIsGeneratingPDF] = useState(false);
   const [shareFile, setShareFile] = useState<{ file: File; msg: string; fileName: string; blob: Blob } | null>(null);
   const [templateType, setTemplateType] = useState<PrintTemplateType>(data.templateType || 'entry');
+  const [scale, setScale] = useState(1);
+  const containerRef = useRef<HTMLDivElement>(null);
+
+  useEffect(() => {
+    const handleResize = () => {
+      if (containerRef.current) {
+        const containerWidth = containerRef.current.clientWidth - 32;
+        if (containerWidth < 794) {
+          setScale(containerWidth / 794);
+        } else {
+          setScale(1);
+        }
+      }
+    };
+    handleResize();
+    const timer = setTimeout(handleResize, 150);
+    window.addEventListener('resize', handleResize);
+    return () => {
+      clearTimeout(timer);
+      window.removeEventListener('resize', handleResize);
+    };
+  }, []);
 
   const invoice = type === 'invoice' ? data.invoice : null;
   const items = type === 'invoice' ? data.items || [] : [];
@@ -216,14 +239,9 @@ export default function PrintPreviewOverlay({
   const executeShare = async () => {
     if (!shareFile) return;
     try {
-      if (navigator.share && navigator.canShare && navigator.canShare({ files: [shareFile.file] })) {
-        await navigator.share({
-          text: shareFile.msg,
-          files: [shareFile.file],
-          title: 'مشاركة المرفق',
-        });
-      } else {
-         fallbackShare(shareFile.blob, shareFile.fileName, shareFile.msg);
+      const success = await sharePdfFile(shareFile.blob, shareFile.fileName, shareFile.msg);
+      if (!success) {
+        fallbackShare(shareFile.blob, shareFile.fileName, shareFile.msg);
       }
     } catch (err) {
       console.error('Share failed:', err);
@@ -359,8 +377,20 @@ export default function PrintPreviewOverlay({
         </div>
       </div>
 
-      <div className="flex-1 overflow-y-auto bg-black p-4 md:p-8 pb-24 text-right w-full">
-        <div id="print-preview-area" className="p-8 bg-white text-gray-900 print:p-0 print:bg-white print:text-black w-[794px] mx-auto flex flex-col relative shrink-0 font-cairo shadow-2xl min-h-[1123px]" dir="rtl">
+      <div 
+        ref={containerRef} 
+        className="flex-1 overflow-y-auto bg-black p-4 md:p-8 pb-24 text-right w-full flex flex-col items-center justify-start overflow-x-hidden"
+      >
+        <div 
+          className="relative origin-top transition-transform duration-150 shrink-0"
+          style={{ 
+            width: '794px', 
+            height: `${1123 * scale}px`, 
+            transform: `scale(${scale})`,
+            marginBottom: scale < 1 ? `${(scale - 1) * 1123}px` : '0px'
+          }}
+        >
+          <div id="print-preview-area" className="p-8 bg-white text-gray-900 print:p-0 print:bg-white print:text-black w-[794px] mx-auto flex flex-col relative shrink-0 font-cairo shadow-2xl min-h-[1123px]" dir="rtl">
           
           {/* Universal Header Layout */}
           <div className="flex justify-between items-start border-b-2 border-gray-900 pb-4 mb-4">
@@ -467,7 +497,7 @@ export default function PrintPreviewOverlay({
                  <div className="flex border-b-2 border-gray-900">
                     <div className="w-1/4 bg-gray-100 p-4 font-black text-gray-700 border-l-2 border-gray-900 text-center flex items-center justify-center">المبلغ</div>
                     <div className="w-3/4 p-4 font-mono font-black text-2xl text-center bg-white">
-                      {Number(voucher.amount).toLocaleString()} <span className="text-base font-sans mr-1">{voucher.currency || 'USD'}</span>
+                      {Number(voucher.amount).toLocaleString('en-US')} <span className="text-base font-sans mr-1">{voucher.currency || 'USD'}</span>
                     </div>
                  </div>
                  <div className="flex border-b-2 border-gray-900">
@@ -550,7 +580,7 @@ export default function PrintPreviewOverlay({
                           {it.deviceType} - {it.deviceName}
                         </td>
                         <td className="py-3 px-3 border-l border-black text-center font-mono text-sm group">
-                          {Number(it.cost || 0).toLocaleString()}
+                          {Number(it.cost || 0).toLocaleString('en-US')}
                         </td>
                         <td className="py-3 px-3 border-l border-black text-xs text-center text-emerald-700 font-bold">
                           {getStatusText(it.status || '50')}
@@ -568,15 +598,15 @@ export default function PrintPreviewOverlay({
                 <div className="flex border-2 border-black rounded-lg overflow-hidden bg-gray-50 mb-6 font-mono font-black w-2/3 mr-auto">
                     <div className="flex-1 p-3 text-center border-l-2 border-black bg-white">
                       <div className="text-[10px] text-gray-500 font-sans mb-1">الإجمالي المستحق</div>
-                      <div className="text-lg text-gray-900">{Number(invoice.totalCost || 0).toLocaleString()} <span className="text-xs font-sans">ر.ي</span></div>
+                      <div className="text-lg text-gray-900">{Number(invoice.totalCost || 0).toLocaleString('en-US')} <span className="text-xs font-sans">ر.ي</span></div>
                     </div>
                     <div className="flex-1 p-3 text-center border-l-2 border-black bg-emerald-50 text-emerald-700">
                       <div className="text-[10px] opacity-70 font-sans mb-1">المدفوع</div>
-                      <div className="text-lg">{Number(invoice.amountPaid || 0).toLocaleString()} <span className="text-xs font-sans">ر.ي</span></div>
+                      <div className="text-lg">{Number(invoice.amountPaid || 0).toLocaleString('en-US')} <span className="text-xs font-sans">ر.ي</span></div>
                     </div>
                     <div className="flex-1 p-3 text-center bg-rose-50 text-rose-700">
                       <div className="text-[10px] opacity-70 font-sans mb-1">المتبقي</div>
-                      <div className="text-lg">{(Number(invoice.totalCost || 0) - Number(invoice.amountPaid || 0)).toLocaleString()} <span className="text-xs font-sans">ر.ي</span></div>
+                      <div className="text-lg">{(Number(invoice.totalCost || 0) - Number(invoice.amountPaid || 0)).toLocaleString('en-US')} <span className="text-xs font-sans">ر.ي</span></div>
                     </div>
                  </div>
               </>
@@ -607,13 +637,13 @@ export default function PrintPreviewOverlay({
                          {['40','50'].includes(it.status) ? 'موافق' : 'بانتظار الرد'}
                       </td>
                       <td className="py-3 px-2 text-center font-mono text-sm">
-                        {Number(it.cost || 0).toLocaleString()}
+                        {Number(it.cost || 0).toLocaleString('en-US')}
                       </td>
                     </tr>
                   ))}
                   <tr className="bg-gray-100 border-t-2 border-black">
                     <td colSpan={5} className="py-3 px-4 border-l border-black text-left font-black text-sm">إجمالي التكلفة المتوقعة لعملية الصيانة</td>
-                    <td className="py-3 px-2 text-base font-black text-center font-mono">{items.reduce((sum:number, it:any) => sum + Number(it.cost || 0), 0).toLocaleString()}</td>
+                    <td className="py-3 px-2 text-base font-black text-center font-mono">{items.reduce((sum:number, it:any) => sum + Number(it.cost || 0), 0).toLocaleString('en-US')}</td>
                   </tr>
                 </tbody>
               </table>
@@ -644,15 +674,15 @@ export default function PrintPreviewOverlay({
                             {it.technicalNotes && <span className="text-gray-600 text-[10px] mr-2">- {it.technicalNotes}</span>}
                           </td>
                           <td className="px-3 py-4 text-center font-mono border-l-2 border-black">{qty}</td>
-                          <td className="px-3 py-4 text-center font-mono border-l-2 border-black">{unit.toLocaleString()}</td>
-                          <td className="px-3 py-4 text-center font-mono text-gray-900">{tCost.toLocaleString()}</td>
+                          <td className="px-3 py-4 text-center font-mono border-l-2 border-black">{unit.toLocaleString('en-US')}</td>
+                          <td className="px-3 py-4 text-center font-mono text-gray-900">{tCost.toLocaleString('en-US')}</td>
                         </tr>
                       );
                     })}
                     <tr className="bg-gray-100 font-bold border-t-2 border-black">
                       <td colSpan={4} className="px-3 py-4 text-left font-black border-l-2 border-black text-base">إجمالي العرض (المبلغ المستحق)</td>
                       <td className="px-3 py-4 text-center font-mono font-black text-xl text-gray-900">
-                        {Number(invoice.totalCost || 0).toLocaleString()} <span className="text-xs font-sans mr-1">{invoice.currency || 'USD'}</span>
+                        {Number(invoice.totalCost || 0).toLocaleString('en-US')} <span className="text-xs font-sans mr-1">{invoice.currency || 'USD'}</span>
                       </td>
                     </tr>
                   </tbody>
@@ -813,6 +843,7 @@ export default function PrintPreviewOverlay({
             
           </div>
 
+        </div>
         </div>
       </div>
     </div>

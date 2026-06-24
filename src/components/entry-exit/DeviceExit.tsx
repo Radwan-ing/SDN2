@@ -1,3 +1,4 @@
+import { sharePdfFile } from '../../lib/shareHelper';
 import { useState, useEffect } from 'react';
 import { collection, onSnapshot, doc, writeBatch, getDoc } from '../../firebase';
 import { db } from '../../firebase';
@@ -310,36 +311,26 @@ export default function DeviceExit({ user, onBack }: { user: User, onBack: () =>
       message += `عزيزي العميل *${invoice.customerName}* المحترم،\n`;
       message += `تجد أدناه الفاتورة الخاصة باستلام أجهزتكم رقم *${invoice.invoiceNumber}*:\n\n`;
       message += `- *رقم الفاتورة:* ${invoice.invoiceNumber}\n`;
-      message += `- *القيمة الإجمالية:* ${selectedCost.toLocaleString()} ${currency}\n`;
+      message += `- *القيمة الإجمالية:* ${selectedCost.toLocaleString('en-US')} ${currency}\n`;
       if (activePrintData && activePrintData.discountAmount > 0) {
-        message += `- *مبلغ الخصم:* ${activePrintData.discountAmount.toLocaleString()} ${currency}\n`;
+        message += `- *مبلغ الخصم:* ${activePrintData.discountAmount.toLocaleString('en-US')} ${currency}\n`;
       }
       if (activePrintData) {
-        message += `- *المبلغ المدفوع:* ${activePrintData.paidAmount.toLocaleString()} ${currency}\n`;
-        message += `- *المبلغ المتبقي:* ${activePrintData.remainingAmount.toLocaleString()} ${currency}\n`;
+        message += `- *المبلغ المدفوع:* ${activePrintData.paidAmount.toLocaleString('en-US')} ${currency}\n`;
+        message += `- *المبلغ المتبقي:* ${activePrintData.remainingAmount.toLocaleString('en-US')} ${currency}\n`;
       }
       message += `\n*الأجهزة المستلمة:*\n`;
       prItems.forEach((item, index) => {
         message += `\n_${index + 1}. *${item.deviceType} - ${item.deviceName || ''}*_\n`;
         message += `   • تقرير الصيانة: ${item.failureReason || item.engineerReport || '-'}\n`;
-        message += `   • التكلفة: ${(item.cost || item.unitCost || 0).toLocaleString()} ${currency}\n`;
+        message += `   • التكلفة: ${(item.cost || item.unitCost || 0).toLocaleString('en-US')} ${currency}\n`;
       });
       message += `\nيسعدنا خدمتكم دائمًا. شكرًا لتعاملكم معنا!`;
 
       let sharedNatively = false;
       try {
-        if (navigator.share && navigator.canShare) {
-          const pdfBlob = pdf.output('blob');
-          const file = new File([pdfBlob], filename, { type: 'application/pdf' });
-          if (navigator.canShare({ files: [file] })) {
-            await navigator.share({
-              files: [file],
-              title: filename,
-              text: message,
-            });
-            sharedNatively = true;
-          }
-        }
+        const pdfBlob = pdf.output('blob');
+        sharedNatively = await sharePdfFile(pdfBlob, filename, message);
       } catch (err) {
         console.warn('Native sharing failed or was cancelled', err);
       }
@@ -611,13 +602,13 @@ export default function DeviceExit({ user, onBack }: { user: User, onBack: () =>
                             {subStatusArabic}
                           </td>
                           <td className="px-3 py-3 text-center font-mono text-gray-900 border-l border-gray-400">
-                            {unitItemCost.toLocaleString()}
+                            {unitItemCost.toLocaleString('en-US')}
                           </td>
                           <td className="px-3 py-3 text-center font-mono text-gray-900 border-l border-gray-400">
                             {itemQty}
                           </td>
                           <td className="px-3 py-3 text-center font-mono font-black text-gray-900 bg-gray-50">
-                            {totalItemCost.toLocaleString()}
+                            {totalItemCost.toLocaleString('en-US')}
                           </td>
                         </tr>
                       );
@@ -629,7 +620,7 @@ export default function DeviceExit({ user, onBack }: { user: User, onBack: () =>
                         {activePrintData.items.reduce((sum, item) => sum + Number(item.quantity || 1), 0)}
                       </td>
                       <td className="px-3 py-4 text-center font-mono font-black text-xl text-gray-900 border-l border-gray-400">
-                        {activePrintData.selectedCost.toLocaleString()} <span className="text-sm font-sans mr-1">{activePrintData.invoice.currency || 'USD'}</span>
+                        {activePrintData.selectedCost.toLocaleString('en-US')} <span className="text-sm font-sans mr-1">{activePrintData.invoice.currency || 'USD'}</span>
                       </td>
                     </tr>
                     {/* Combine discount, paid amount, and remaining amount in a single horizontal row */}
@@ -641,7 +632,7 @@ export default function DeviceExit({ user, onBack }: { user: User, onBack: () =>
                             <div className="flex items-center justify-center gap-1.5 flex-wrap">
                               <span className="text-gray-500 font-extrabold text-xs">مبلغ الخصم:</span>
                               <span className="font-mono font-black text-amber-600 text-sm">
-                                {activePrintData.discountAmount.toLocaleString()}
+                                {activePrintData.discountAmount.toLocaleString('en-US')}
                               </span>
                               <span className="text-[10px] font-sans text-gray-400 font-bold">{activePrintData.invoice.currency || 'USD'}</span>
                             </div>
@@ -652,7 +643,7 @@ export default function DeviceExit({ user, onBack }: { user: User, onBack: () =>
                             <div className="flex items-center justify-center gap-1.5 flex-wrap">
                               <span className="text-gray-500 font-extrabold text-xs">المبلغ المدفوع:</span>
                               <span className="font-mono font-black text-emerald-700 text-sm">
-                                {activePrintData.paidAmount.toLocaleString()}
+                                {activePrintData.paidAmount.toLocaleString('en-US')}
                               </span>
                               <span className="text-[10px] font-sans text-gray-400 font-bold">{activePrintData.invoice.currency || 'USD'}</span>
                             </div>
@@ -663,7 +654,7 @@ export default function DeviceExit({ user, onBack }: { user: User, onBack: () =>
                             <div className="flex items-center justify-center gap-1.5 flex-wrap">
                               <span className="text-red-950 font-black text-sm">المبلغ المتبقي:</span>
                               <span className="font-mono font-black text-red-600 text-lg">
-                                {activePrintData.remainingAmount.toLocaleString()}
+                                {activePrintData.remainingAmount.toLocaleString('en-US')}
                               </span>
                               <span className="text-xs font-sans text-red-800 font-black">{activePrintData.invoice.currency || 'USD'}</span>
                             </div>
@@ -676,7 +667,7 @@ export default function DeviceExit({ user, onBack }: { user: User, onBack: () =>
                             <div className="flex items-center justify-center gap-1.5 flex-wrap">
                               <span className="text-gray-500 font-extrabold text-xs">المبلغ المدفوع:</span>
                               <span className="font-mono font-black text-emerald-700 text-sm">
-                                {activePrintData.paidAmount.toLocaleString()}
+                                {activePrintData.paidAmount.toLocaleString('en-US')}
                               </span>
                               <span className="text-[10px] font-sans text-gray-400 font-bold">{activePrintData.invoice.currency || 'USD'}</span>
                             </div>
@@ -687,7 +678,7 @@ export default function DeviceExit({ user, onBack }: { user: User, onBack: () =>
                             <div className="flex items-center justify-center gap-1.5 flex-wrap">
                               <span className="text-red-950 font-black text-sm">المبلغ المتبقي:</span>
                               <span className="font-mono font-black text-red-600 text-lg">
-                                {activePrintData.remainingAmount.toLocaleString()}
+                                {activePrintData.remainingAmount.toLocaleString('en-US')}
                               </span>
                               <span className="text-xs font-sans text-red-800 font-black">{activePrintData.invoice.currency || 'USD'}</span>
                             </div>
@@ -936,12 +927,12 @@ export default function DeviceExit({ user, onBack }: { user: User, onBack: () =>
 
                             {/* 4. المبلغ */}
                             <td className="px-3 py-2 text-center font-mono text-white text-xs">
-                              {unitItemCost.toLocaleString()}
+                              {unitItemCost.toLocaleString('en-US')}
                             </td>
 
                             {/* 5. اجمالي المبلغ */}
                             <td className="px-3 py-2 text-center font-mono text-orange-400 font-bold text-xs">
-                              {totalItemCost.toLocaleString()}
+                              {totalItemCost.toLocaleString('en-US')}
                             </td>
 
                             {/* 6. التقرير */}

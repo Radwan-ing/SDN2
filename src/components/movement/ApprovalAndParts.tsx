@@ -1,3 +1,4 @@
+import { sharePdfFile } from '../../lib/shareHelper';
 import React, { useState, useEffect } from 'react';
 import { collection, onSnapshot, doc, writeBatch, serverTimestamp, getDoc } from '../../firebase';
 import { db } from '../../firebase';
@@ -346,29 +347,19 @@ export default function ApprovalAndParts({ user, onBack, initialInvoice }: { use
       message += `عزيزي العميل *${invoice.customerName}* المحترم،\n`;
       message += `تجد أدناه ملخص تقرير الفحص وعرض الأسعار صيانة أجهزتكم في الفاتورة رقم *${invoice.invoiceNumber}*:\n\n`;
       message += `- *رقم التقرير:* ${invoice.invoiceNumber}\n`;
-      message += `- *القيمة الإجمالية المقدرة:* ${totalInvoiceCost.toLocaleString()} ${currency}\n\n`;
+      message += `- *القيمة الإجمالية المقدرة:* ${totalInvoiceCost.toLocaleString('en-US')} ${currency}\n\n`;
       message += `*جدول الأجهزة المسجلة بالفحص:*\n`;
       invoiceSpecItems.forEach((item, index) => {
         message += `\n_${index + 1}. *${item.deviceType} - ${item.deviceName || ''}*_\n`;
         message += `   • تقرير المعاينة: ${item.engineerReport || item.faultType || 'قيد المعاينة والفحص'}\n`;
-        message += `   • التكلفة: ${(item.cost || item.unitCost || 0).toLocaleString()} ${currency}\n`;
+        message += `   • التكلفة: ${(item.cost || item.unitCost || 0).toLocaleString('en-US')} ${currency}\n`;
       });
       message += `\nيسعدنا مراجعتكم وبانتظار الموافقة لبدء الصيانة فورًا. شكرًا لتعاملكم الراقي معنا!`;
 
       let sharedNatively = false;
       try {
-        if (navigator.share && navigator.canShare) {
-          const pdfBlob = pdf.output('blob');
-          const file = new File([pdfBlob], filename, { type: 'application/pdf' });
-          if (navigator.canShare({ files: [file] })) {
-            await navigator.share({
-              files: [file],
-              title: filename,
-              text: message,
-            });
-            sharedNatively = true;
-          }
-        }
+        const pdfBlob = pdf.output('blob');
+        sharedNatively = await sharePdfFile(pdfBlob, filename, message);
       } catch (shareErr) {
         console.warn('Native share was skipped:', shareErr);
       }
@@ -1907,13 +1898,13 @@ export default function ApprovalAndParts({ user, onBack, initialInvoice }: { use
                                 {item.engineerReport || item.faultType || 'قيد المعاينة والمراجعة'}
                               </td>
                               <td className="px-3 py-3 text-center font-mono text-gray-900 border-l border-gray-400">
-                                {unitItemCost.toLocaleString()}
+                                {unitItemCost.toLocaleString('en-US')}
                               </td>
                               <td className="px-3 py-3 text-center font-mono text-gray-900 border-l border-gray-400">
                                 {itemQty}
                               </td>
                               <td className="px-3 py-3 text-center font-mono font-black text-gray-900 bg-gray-50">
-                                {totalItemCost.toLocaleString()}
+                                {totalItemCost.toLocaleString('en-US')}
                               </td>
                             </tr>
                           );
@@ -1925,7 +1916,7 @@ export default function ApprovalAndParts({ user, onBack, initialInvoice }: { use
                             {invItems.reduce((sum, item) => sum + Number(item.quantity || 1), 0)}
                           </td>
                           <td className="px-3 py-4 text-center font-mono font-black text-xl text-gray-900">
-                            {invItems.reduce((sum, item) => sum + Number(item.cost || 0), 0).toLocaleString()} <span className="text-sm font-sans mr-1">{currencyVal}</span>
+                            {invItems.reduce((sum, item) => sum + Number(item.cost || 0), 0).toLocaleString('en-US')} <span className="text-sm font-sans mr-1">{currencyVal}</span>
                           </td>
                         </tr>
                       </tbody>

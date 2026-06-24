@@ -772,7 +772,7 @@ export default function AccountingInputs() {
                           </span>
                         </td>
                         <td className="py-3 px-4 font-cairo">{f.currency}</td>
-                        <td className="py-3 px-4 font-mono font-bold text-emerald-400">{f.balance?.toLocaleString()}</td>
+                        <td className="py-3 px-4 font-mono font-bold text-emerald-400">{f.balance?.toLocaleString('en-US')}</td>
                         <td className="py-3 px-4 font-cairo">
                           <span className={`px-2 py-0.5 rounded-lg text-[10px] font-bold ${f.status === 'active' ? 'bg-green-500/10 text-green-400' : 'bg-red-500/10 text-red-400'}`}>
                             {f.status === 'active' ? 'فعال' : 'موقوف'}

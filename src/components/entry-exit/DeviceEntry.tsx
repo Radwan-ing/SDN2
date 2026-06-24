@@ -1,3 +1,4 @@
+import { sharePdfFile } from '../../lib/shareHelper';
 import { useState, useEffect } from 'react';
 import { 
   Plus, 
@@ -494,15 +495,9 @@ export default function DeviceEntry({ onBack, user }: { onBack: () => void, user
 
               let sharedNatively = false;
               try {
-                if (navigator.share && navigator.canShare) {
-                  const pdfBlob = pdf.output('blob');
-                  const file = new File([pdfBlob], filename, { type: 'application/pdf' });
-                  if (navigator.canShare({ files: [file] })) {
-                     await navigator.share({ files: [file], title: filename, text: message });
-                     sharedNatively = true;
-                  }
-                }
-              } catch (shareErr) {
+        const pdfBlob = pdf.output('blob');
+        sharedNatively = await sharePdfFile(pdfBlob, filename, message);
+      } catch (shareErr) {
                 console.warn('Native sharing failed, falling back to WhatsApp redirect', shareErr);
               }
 
@@ -1128,13 +1123,17 @@ export default function DeviceEntry({ onBack, user }: { onBack: () => void, user
                     <div className="flex items-center gap-3">
                        <label className="text-xs text-gray-500 uppercase font-black tracking-widest text-right w-16 shrink-0 lg:w-16">العدد</label>
                        <input 
-                         type="number"
-                         min="1"
+                         type="text"
+                         inputMode="numeric"
+                         pattern="[0-9]*"
                          dir="ltr"
                          lang="en"
                          onFocus={(e) => e.target.select()}
                          value={Number.isNaN(Number(currentDevice.quantity)) ? '' : currentDevice.quantity}
-                         onChange={(e) => setCurrentDevice({...currentDevice, quantity: e.target.value === '' ? '' : Math.max(1, parseInt(e.target.value)) })}
+                         onChange={(e) => {
+                           const val = e.target.value.replace(/[^0-9]/g, '');
+                           setCurrentDevice({...currentDevice, quantity: val === '' ? '' : Math.max(1, parseInt(val)) });
+                         }}
                          className="w-full bg-black border border-white/10 rounded-xl px-2 py-2 focus:border-orange-500 outline-none text-center font-mono font-black text-white text-sm flex-1"
                        />
                     </div>

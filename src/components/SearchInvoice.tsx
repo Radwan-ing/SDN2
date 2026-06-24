@@ -656,7 +656,7 @@ export default function SearchInvoice({ onBack }: { onBack?: () => void }) {
                         <div className="p-4 bg-white/5 border border-white/5 rounded-2xl text-center md:text-left min-w-[200px]">
                           <span className="text-[9px] text-gray-500 font-bold font-cairo block uppercase">الرصيد الصافي الجاري</span>
                           <span className={`text-xl font-black font-mono tracking-tight block my-0.5 ${isCreditor ? 'text-emerald-400' : isDebtor ? 'text-rose-500' : 'text-gray-400'}`}>
-                            {Math.abs(diff).toLocaleString()} <span className="text-xs font-sans">{arCurrency}</span>
+                            {Math.abs(diff).toLocaleString('en-US')} <span className="text-xs font-sans">{arCurrency}</span>
                           </span>
                           <span className="text-[10px] text-gray-400 font-bold font-cairo">
                             {isCreditor ? 'دائن (له مبالغ في الخزينة)' : isDebtor ? 'مدين (متبقي مستحقات صيانة)' : 'متزن دفترياً'}
@@ -1028,7 +1028,7 @@ export default function SearchInvoice({ onBack }: { onBack?: () => void }) {
                     <div className="text-center p-4 bg-white/[0.02] border border-white/5 rounded-2xl my-2">
                       <span className="text-[10px] text-gray-500 font-bold">المبلغ المدفوع كلياً</span>
                       <p className={`text-2xl font-black font-mono tracking-tight my-1 ${selectedVoucher.type === 'receipt' ? 'text-emerald-400' : 'text-rose-500'}`}>
-                        {Math.abs(Number(selectedVoucher.amount || 0)).toLocaleString()} <span className="text-sm font-cairo font-bold">{selectedVoucher.currency}</span>
+                        {Math.abs(Number(selectedVoucher.amount || 0)).toLocaleString('en-US')} <span className="text-sm font-cairo font-bold">{selectedVoucher.currency}</span>
                       </p>
                     </div>
 
