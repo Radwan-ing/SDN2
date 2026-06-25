@@ -340,7 +340,8 @@ export default function SearchInvoice({ onBack }: { onBack?: () => void }) {
               ...inv,
               customerPhone: cust?.phone1 || inv.customerPhone || ''
             },
-            items: getInvoiceItemsList(inv.invoiceNumber, inv.id)
+            items: getInvoiceItemsList(inv.invoiceNumber, inv.id),
+            templateType: invoicePrintTemplate
           }
         });
       }
@@ -354,8 +355,10 @@ export default function SearchInvoice({ onBack }: { onBack?: () => void }) {
           data: {
             voucher: {
                ...tx,
-               customerPhone: cust?.phone1 || tx.customerPhone || ''
-            }
+               customerPhone: cust?.phone1 || tx.customerPhone || '',
+               type: voucherPrintTemplate
+            },
+            templateType: voucherPrintTemplate
           }
         });
       }

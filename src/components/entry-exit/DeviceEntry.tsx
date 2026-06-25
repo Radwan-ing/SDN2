@@ -24,6 +24,7 @@ import {
 } from 'lucide-react';
 import jsPDF from 'jspdf';
 import html2canvas from 'html2canvas';
+import { sanitizeDocumentStyles, sanitizeElementInlineStyles, cleanOklchInStyleText } from '../../lib/html2canvasHelper';
 import BankAccountsFooter from '../BankAccountsFooter';
 import { 
   collection, 
@@ -339,6 +340,7 @@ export default function DeviceEntry({ onBack, user }: { onBack: () => void, user
         const originalStyle = document.createElement('style');
         originalStyle.innerHTML = `
           @media print {
+        @page { size: auto; margin: 0; }
             body * { visibility: hidden !important; }
             #print-report-area, #print-report-area * { visibility: visible !important; }
             #print-report-area {
@@ -346,6 +348,8 @@ export default function DeviceEntry({ onBack, user }: { onBack: () => void, user
               left: 0;
               top: 0;
               width: 100% !important;
+          margin: 0 !important;
+          padding: 10mm !important;
               color: #000000 !important;
               background-color: #ffffff !important;
             }
@@ -406,6 +410,9 @@ export default function DeviceEntry({ onBack, user }: { onBack: () => void, user
 
               window.getComputedStyle = customGetComputedStyle as any;
 
+              await sanitizeDocumentStyles();
+              sanitizeElementInlineStyles(element);
+
               let clonedAreaHeight = 842;
               const canvas = await html2canvas(element, {
                 scale: 2,
@@ -414,6 +421,13 @@ export default function DeviceEntry({ onBack, user }: { onBack: () => void, user
                 backgroundColor: '#ffffff',
                 logging: false,
                 onclone: (clonedDoc) => {
+                  const styles = clonedDoc.querySelectorAll('style');
+                  styles.forEach((style) => {
+                    if (style.textContent && (style.textContent.includes('oklch') || style.textContent.includes('oklab'))) {
+                      style.textContent = cleanOklchInStyleText(style.textContent);
+                    }
+                  });
+
                   const win = clonedDoc.defaultView;
                   if (win) {
                     win.getComputedStyle = customGetComputedStyle;
@@ -471,7 +485,7 @@ export default function DeviceEntry({ onBack, user }: { onBack: () => void, user
               pdf.addImage(imgData, 'JPEG', 0, position, pdfWidth, pdfHeight, undefined, 'FAST');
               heightLeft -= pdf.internal.pageSize.getHeight();
 
-              while (heightLeft >= 0) {
+              while (heightLeft > 0.5) {
                 position = heightLeft - pdfHeight;
                 pdf.addPage();
                 pdf.addImage(imgData, 'JPEG', 0, position, pdfWidth, pdfHeight, undefined, 'FAST');
@@ -676,7 +690,7 @@ export default function DeviceEntry({ onBack, user }: { onBack: () => void, user
 
           {/* Printable A4 Container */}
           <div className="flex-1 overflow-x-auto bg-black p-4 md:p-8 pb-24 text-right w-full">
-            <div id="print-report-area" className="p-8 bg-white text-gray-900 print:p-0 print:bg-white print:text-black w-[794px] min-h-[1123px] mx-auto flex flex-col relative shrink-0 font-cairo text-right" dir="rtl">
+            <div id="print-report-area" className="p-8 bg-white text-gray-900 print:p-0 print:bg-white print:text-black w-[794px] min-h-fit mx-auto flex flex-col relative shrink-0 font-cairo text-right" dir="rtl">
               {/* Header Layout */}
               <div className="flex justify-between items-start border-b-2 border-gray-900 pb-4 mb-4">
                 {/* Right Corner: Shop Name */}

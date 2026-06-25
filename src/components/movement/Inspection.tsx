@@ -9,6 +9,7 @@ import { motion, AnimatePresence } from 'motion/react';
 import BankAccountsFooter from '../BankAccountsFooter';
 import jsPDF from 'jspdf';
 import html2canvas from 'html2canvas';
+import { sanitizeDocumentStyles, sanitizeElementInlineStyles, cleanOklchInStyleText } from '../../lib/html2canvasHelper';
 
 const WhatsAppIcon = (props: React.SVGProps<SVGSVGElement>) => (
   <svg viewBox="0 0 24 24" width="24" height="24" fill="currentColor" {...props}>
@@ -476,6 +477,7 @@ export default function Inspection({ user, onBack, initialInvoice }: { user: Use
     const originalStyle = document.createElement('style');
     originalStyle.innerHTML = `
       @media print {
+        @page { size: auto; margin: 0; }
         body * {
           visibility: hidden !important;
         }
@@ -567,6 +569,9 @@ export default function Inspection({ user, onBack, initialInvoice }: { user: Use
       // Apply globally
       window.getComputedStyle = customGetComputedStyle;
 
+      await sanitizeDocumentStyles();
+      sanitizeElementInlineStyles(element);
+
       let clonedAreaHeight = 800; // fallback
 
       const canvas = await html2canvas(element, {
@@ -575,6 +580,13 @@ export default function Inspection({ user, onBack, initialInvoice }: { user: Use
         allowTaint: true,
         backgroundColor: '#ffffff',
         onclone: (clonedDoc) => {
+          const styles = clonedDoc.querySelectorAll('style');
+          styles.forEach((style) => {
+            if (style.textContent && (style.textContent.includes('oklch') || style.textContent.includes('oklab'))) {
+              style.textContent = cleanOklchInStyleText(style.textContent);
+            }
+          });
+
           const win = clonedDoc.defaultView;
           if (win) {
             win.getComputedStyle = customGetComputedStyle;
@@ -972,7 +984,7 @@ export default function Inspection({ user, onBack, initialInvoice }: { user: Use
 
             {/* Printable Section Box */}
             <div className="overflow-x-auto w-full pb-4 bg-white">
-              <div id="print-report-area" className="p-8 bg-white text-gray-900 print:p-0 print:bg-white print:text-black w-[794px] min-h-[1123px] mx-auto">
+              <div id="print-report-area" className="p-8 bg-white text-gray-900 print:p-0 print:bg-white print:text-black w-[794px] min-h-fit mx-auto">
                   {/* Header Layout */}
                   <div className="flex justify-between items-start border-b-2 border-gray-900 pb-4 mb-4">
                     {/* Right Corner: Shop Name */}

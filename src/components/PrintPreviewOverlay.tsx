@@ -3,6 +3,7 @@ import { ArrowLeft, Printer, Share2, Smartphone, MessageCircle, Phone, Loader2, 
 import { jsPDF } from 'jspdf';
 import html2canvas from 'html2canvas';
 import { sharePdfFile } from '../lib/shareHelper';
+import { sanitizeDocumentStyles, sanitizeElementInlineStyles, cleanOklchInStyleText } from '../lib/html2canvasHelper';
 
 type PrintTemplateType = 'entry' | 'exit' | 'inspection' | 'quotation' | 'assignment' | 'maintenance';
 
@@ -12,16 +13,30 @@ export default function PrintPreviewOverlay({
   onClose,
   shopConfig
 }: { 
-  type: 'invoice' | 'voucher';
+  type: 'invoice' | 'voucher' | 'statement';
   data: any;
   onClose: () => void;
   shopConfig: any;
 }) {
   const [isGeneratingPDF, setIsGeneratingPDF] = useState(false);
   const [shareFile, setShareFile] = useState<{ file: File; msg: string; fileName: string; blob: Blob } | null>(null);
-  const [templateType, setTemplateType] = useState<PrintTemplateType>(data.templateType || 'entry');
+  const [templateType, setTemplateType] = useState<PrintTemplateType>(data?.templateType || 'entry');
   const [scale, setScale] = useState(1);
   const containerRef = useRef<HTMLDivElement>(null);
+  const printAreaRef = useRef<HTMLDivElement>(null);
+  const [contentHeight, setContentHeight] = useState(1123);
+
+  useEffect(() => {
+    if (printAreaRef.current) {
+      const resizeObserver = new ResizeObserver((entries) => {
+        for (let entry of entries) {
+          setContentHeight(entry.contentRect.height);
+        }
+      });
+      resizeObserver.observe(printAreaRef.current);
+      return () => resizeObserver.disconnect();
+    }
+  }, []);
 
   useEffect(() => {
     const handleResize = () => {
@@ -46,6 +61,7 @@ export default function PrintPreviewOverlay({
   const invoice = type === 'invoice' ? data.invoice : null;
   const items = type === 'invoice' ? data.items || [] : [];
   const voucher = type === 'voucher' ? data.voucher : null;
+  const statement = type === 'statement' ? data.statement : null;
 
   // Auto-detect default template based on invoice status if possible
   useEffect(() => {
@@ -62,13 +78,17 @@ export default function PrintPreviewOverlay({
     const originalStyle = document.createElement('style');
     originalStyle.innerHTML = `
       @media print {
+        @page { size: auto; margin: 0; }
         body * { visibility: hidden !important; }
+        .scale-wrapper { height: auto !important; margin: 0 !important; transform: none !important; }
         #print-preview-area, #print-preview-area * { visibility: visible !important; }
         #print-preview-area {
           position: absolute;
           left: 0;
           top: 0;
           width: 100% !important;
+          margin: 0 !important;
+          padding: 10mm !important;
           color: #000000 !important;
           background-color: #ffffff !important;
         }
@@ -180,7 +200,26 @@ export default function PrintPreviewOverlay({
           }
         });
 
-        const canvas = await html2canvas(printArea, { scale: 2, useCORS: true });
+        // Sanitize document styles and element inline styles first
+        await sanitizeDocumentStyles();
+        sanitizeElementInlineStyles(printArea);
+
+        const canvas = await html2canvas(printArea, { 
+          scale: 2, 
+          useCORS: true,
+          onclone: (clonedDoc) => {
+            const styles = clonedDoc.querySelectorAll('style');
+            styles.forEach((style) => {
+              if (style.textContent && (style.textContent.includes('oklch') || style.textContent.includes('oklab'))) {
+                style.textContent = cleanOklchInStyleText(style.textContent);
+              }
+            });
+            const clonedPrintArea = clonedDoc.getElementById('print-preview-area');
+            if (clonedPrintArea instanceof HTMLElement) {
+              sanitizeElementInlineStyles(clonedPrintArea);
+            }
+          }
+        });
         
         // Restore styles
         originalStyles.forEach((val, el) => {
@@ -204,7 +243,7 @@ export default function PrintPreviewOverlay({
         pdf.addImage(imgData, 'JPEG', 0, position, pdfWidth, pdfHeight);
         heightLeft -= pdf.internal.pageSize.getHeight();
       
-        while (heightLeft >= 0) {
+        while (heightLeft > 0.5) {
           position = heightLeft - pdfHeight;
           pdf.addPage();
           pdf.addImage(imgData, 'JPEG', 0, position, pdfWidth, pdfHeight);
@@ -216,9 +255,17 @@ export default function PrintPreviewOverlay({
           setIsGeneratingPDF(false);
           return;
         }
-        const fileName = type === 'invoice' ? `invoice_${invoice.invoiceNumber}.pdf` : `voucher_${voucher.reference}.pdf`;
+        const fileName = type === 'invoice' 
+          ? `invoice_${invoice.invoiceNumber}.pdf` 
+          : (type === 'statement' 
+              ? `كشف_حساب_${statement?.customerName || 'عميل'}.pdf` 
+              : `voucher_${voucher.reference}.pdf`);
         const file = new File([blob], fileName, { type: 'application/pdf' });
-        const msg = type === 'invoice' ? `مرفق ${getTemplateName(templateType)}` : 'مرفق سند مالي';
+        const msg = type === 'invoice' 
+          ? `مرفق ${getTemplateName(templateType)}` 
+          : (type === 'statement' 
+              ? `مرفق كشف حساب مالي للعميل: ${statement?.customerName}` 
+              : 'مرفق سند مالي');
         
         setShareFile({ file, msg, fileName, blob });
         setIsGeneratingPDF(false);
@@ -341,7 +388,7 @@ export default function PrintPreviewOverlay({
           )}
           
           <h2 className="text-white font-bold hidden sm:block mr-4 border-r border-white/20 pr-4">
-            {type === 'invoice' ? `مستند الفاتورة - #${invoice.invoiceNumber}` : `استعراض السند - #${voucher.reference}`}
+            {type === 'invoice' ? `مستند الفاتورة - #${invoice.invoiceNumber}` : (type === 'statement' ? `كشف حساب - ${statement?.customerName}` : `استعراض السند - #${voucher.reference}`)}
           </h2>
         </div>
         <div className="flex items-center gap-2">
@@ -382,15 +429,19 @@ export default function PrintPreviewOverlay({
         className="flex-1 overflow-y-auto bg-black p-4 md:p-8 pb-24 text-right w-full flex flex-col items-center justify-start overflow-x-hidden"
       >
         <div 
-          className="relative origin-top transition-transform duration-150 shrink-0"
+          className="relative origin-top transition-transform duration-150 shrink-0 scale-wrapper"
           style={{ 
             width: '794px', 
-            height: `${1123 * scale}px`, 
+            height: `${contentHeight * scale}px`, 
             transform: `scale(${scale})`,
-            marginBottom: scale < 1 ? `${(scale - 1) * 1123}px` : '0px'
+            marginBottom: scale < 1 ? `${(scale - 1) * contentHeight}px` : '0px'
           }}
         >
-          <div id="print-preview-area" className="p-8 bg-white text-gray-900 print:p-0 print:bg-white print:text-black w-[794px] mx-auto flex flex-col relative shrink-0 font-cairo shadow-2xl min-h-[1123px]" dir="rtl">
+          <div ref={printAreaRef} id="print-preview-area" className="p-8 bg-white text-gray-900 print:p-0 print:bg-white print:text-black w-[794px] mx-auto flex flex-col relative shrink-0 font-cairo shadow-2xl min-h-fit" dir="rtl">
+            {/* Faint print date and time watermark */}
+            <div className="absolute left-8 top-3 text-[8px] text-gray-400 font-normal select-none opacity-45 font-mono pointer-events-none" dir="rtl">
+              تاريخ ووقت الطباعة: {new Date().toLocaleDateString('ar-YE')} {new Date().toLocaleTimeString('ar-YE', { hour12: true, hour: '2-digit', minute: '2-digit' })}
+            </div>
           
           {/* Universal Header Layout */}
           <div className="flex justify-between items-start border-b-2 border-gray-900 pb-4 mb-4">
@@ -442,23 +493,31 @@ export default function PrintPreviewOverlay({
               ) : (
                 <div className="w-12 h-12 border border-dashed border-gray-300 rounded-xl mb-1.5 flex items-center justify-center text-gray-400 text-[10px] font-bold">شعار المحل</div>
               )}
-              <h1 className="text-lg font-black text-gray-900 tracking-tight border-2 border-gray-900 px-4 py-1.5 rounded-lg inline-block bg-gray-50/50">
-                {type === 'invoice' ? getTemplateName(templateType) : (voucher.type === 'receipt' ? 'سند قبض' : 'سند صرف')}
+              <h1 className="text-sm md:text-base font-black text-gray-900 tracking-tight border-2 border-gray-900 px-6 h-10 inline-flex items-center justify-center rounded-lg bg-gray-50/50 leading-none whitespace-nowrap">
+                {type === 'invoice' ? getTemplateName(templateType) : (type === 'statement' ? 'كشف حساب مالي' : (voucher.type === 'receipt' ? 'سند قبض مالي' : 'سند صرف مالي'))}
               </h1>
             </div>
 
             {/* Left Corner: Info */}
             <div className="text-left flex-1 space-y-1 pt-1 bg-gray-50/50 p-3 rounded-lg border border-gray-200">
               <div className="text-sm font-bold text-gray-700 flex justify-between gap-4">
-                <span>{type === 'invoice' ? (templateType === 'quotation' ? 'رقم العرض:' : 'رقم المستند:') : 'رقم المرجع:'}</span>
-                <span className="font-mono text-gray-900">{type === 'invoice' ? invoice.invoiceNumber : voucher.reference}</span>
+                <span>{type === 'invoice' ? (templateType === 'quotation' ? 'رقم العرض:' : 'رقم المستند:') : (type === 'statement' ? 'رقم الحساب:' : 'رقم المرجع:')}</span>
+                <span className="font-mono text-gray-900">
+                  {type === 'invoice' 
+                    ? invoice.invoiceNumber 
+                    : (type === 'statement' 
+                        ? (statement?.customerNumber || statement?.id?.substring(0, 5)) 
+                        : voucher.reference)}
+                </span>
               </div>
               <div className="text-sm font-bold text-gray-700 flex justify-between gap-4">
                 <span>التاريخ:</span>
                 <span className="font-mono text-gray-900">
                   {type === 'invoice' 
                     ? formatDate(invoice.createdAt)
-                    : formatDate(voucher.date)}
+                    : (type === 'statement'
+                        ? formatDate(statement?.date)
+                        : formatDate(voucher.date))}
                 </span>
               </div>
               <div className="text-sm font-bold text-gray-700 flex justify-between gap-4 border-t border-gray-200 pt-1 mt-1">
@@ -466,7 +525,9 @@ export default function PrintPreviewOverlay({
                 <span className="font-mono text-gray-900" dir="ltr">
                   {type === 'invoice' 
                     ? formatTime(invoice.createdAt)
-                    : formatTime(voucher.date)}
+                    : (type === 'statement'
+                        ? formatTime(statement?.date)
+                        : formatTime(voucher.date))}
                 </span>
               </div>
             </div>
@@ -475,13 +536,29 @@ export default function PrintPreviewOverlay({
           {/* Customer Info Box */}
           <div className="bg-gray-100 p-3 rounded-lg mb-4 border border-gray-300 flex justify-between items-center px-6">
             <div className="text-sm font-black text-gray-900">
-              <span className="text-xs text-gray-600 ml-2">{type === 'voucher' ? 'الاسم:' : 'العميل:'}</span>
-              {type === 'invoice' ? invoice.customerName : voucher.customerName}
+              <span className="text-xs text-gray-600 ml-2">إسم العميل:</span>
+              {type === 'invoice' 
+                ? invoice.customerName 
+                : (type === 'statement' 
+                    ? statement?.customerName 
+                    : voucher.customerName)}
             </div>
-            {type === 'invoice' && invoice.customerPhone && (
+            {type === 'statement' && statement?.companyName && (
+              <div className="text-sm font-black text-gray-900 border-r border-gray-300 pr-6">
+                <span className="text-xs text-gray-600 ml-2">الجهة:</span>
+                <span>{statement?.companyName}</span>
+              </div>
+            )}
+            {(type === 'invoice' && invoice.customerPhone) && (
               <div className="text-sm font-black text-gray-900 border-r border-gray-300 pr-6">
                 <span className="text-xs text-gray-600 ml-2">الجوال:</span>
                 <span className="font-mono" dir="ltr">{invoice.customerPhone}</span>
+              </div>
+            )}
+            {(type === 'statement' && statement?.customerPhone) && (
+              <div className="text-sm font-black text-gray-900 border-r border-gray-300 pr-6">
+                <span className="text-xs text-gray-600 ml-2">الجوال:</span>
+                <span className="font-mono" dir="ltr">{statement?.customerPhone}</span>
               </div>
             )}
           </div>
@@ -492,7 +569,7 @@ export default function PrintPreviewOverlay({
               <div className="mt-8 border-2 border-gray-900 rounded-lg overflow-hidden">
                  <div className="flex border-b-2 border-gray-900">
                     <div className="w-1/4 bg-gray-100 p-4 font-black text-gray-700 border-l-2 border-gray-900 text-center flex items-center justify-center">نوع السند</div>
-                    <div className="w-3/4 p-4 font-black text-xl text-center bg-white">{voucher.type === 'receipt' ? 'سند قبض مالي' : 'سند صرف فني'}</div>
+                    <div className="w-3/4 p-4 font-black text-xl text-center bg-white">{voucher.type === 'receipt' ? 'سند قبض مالي' : 'سند صرف مالي'}</div>
                  </div>
                  <div className="flex border-b-2 border-gray-900">
                     <div className="w-1/4 bg-gray-100 p-4 font-black text-gray-700 border-l-2 border-gray-900 text-center flex items-center justify-center">المبلغ</div>
@@ -520,6 +597,81 @@ export default function PrintPreviewOverlay({
                       </div>
                    </div>
                  )}
+              </div>
+            )}
+
+            {type === 'statement' && (
+              <div className="space-y-4">
+                {/* Distinctive Net Balance Box */}
+                <div className="border border-gray-400 p-4 rounded-xl text-center font-cairo bg-white">
+                  <div className="text-[11px] font-black text-gray-500 uppercase tracking-wider mb-0.5">صافي الحساب المالي الجاري</div>
+                  <div className="text-2xl font-black font-mono text-gray-950 tracking-tight my-1">
+                    {Math.abs(statement?.balance || 0).toLocaleString('en-US')} <span className="text-sm font-cairo font-bold">{statement?.currency}</span>
+                  </div>
+                  <div className="text-xs font-black text-gray-900">
+                    حالة الحساب: {statement?.balanceStatus}
+                  </div>
+                </div>
+
+                {/* operations table */}
+                <div className="space-y-2">
+                  <span className="text-xs font-black text-gray-800 font-cairo block">العمليات والتحركات المالية (القيود مرتبة بتسلسل تاريخي):</span>
+                  <div className="border border-gray-400 rounded-xl overflow-hidden bg-white text-xs">
+                    <table className="w-full border-collapse text-right select-none">
+                      <thead>
+                        <tr className="bg-white border-b-2 border-gray-400 text-gray-950 font-cairo font-black">
+                          <th className="py-2.5 px-3 text-center w-12 border-l border-gray-400">مـ</th>
+                          <th className="py-2.5 px-3 border-l border-gray-400 text-right">نوع الحركة</th>
+                          <th className="py-2.5 px-3 text-center border-l border-gray-400 w-24">رقم المرجع</th>
+                          <th className="py-2.5 px-3 text-center border-l border-gray-400 w-36">تاريخ ووقت القيد</th>
+                          <th className="py-2.5 px-4 border-l border-gray-400 text-right">البيان والتفاصيل</th>
+                          <th className="py-2.5 px-4 text-rose-800 text-center border-l border-gray-400 bg-rose-50/10 w-28">المستحق (مدين)</th>
+                          <th className="py-2.5 px-4 text-emerald-800 text-center border-l border-gray-400 bg-emerald-50/10 w-28">المقبوض (دائن)</th>
+                          <th className="py-2.5 px-4 text-center font-black bg-gray-50 w-32">الرصيد الجاري</th>
+                        </tr>
+                      </thead>
+                      <tbody className="divide-y divide-gray-400 font-bold">
+                        {(statement?.entries || []).length === 0 ? (
+                          <tr>
+                            <td colSpan={8} className="py-8 text-center text-gray-500 font-cairo font-bold bg-white">
+                              لا يوجد أي قيود أو عمليات محاسبية مسجلة لهذا العميل حتى الآن.
+                            </td>
+                          </tr>
+                        ) : (
+                          statement.entries.map((entry: any, index: number) => (
+                            <tr key={entry.id || index} className="hover:bg-gray-50 transition-all text-gray-950 bg-white">
+                              <td className="py-2.5 px-3 font-mono text-center text-gray-600 border-l border-gray-400 bg-gray-50/50">
+                                {index + 1}
+                              </td>
+                              <td className="py-2.5 px-3 font-cairo font-bold text-gray-900 border-l border-gray-400 text-right">
+                                {entry.type}
+                              </td>
+                              <td className="py-2.5 px-3 font-mono font-bold text-gray-800 text-center border-l border-gray-400">
+                                {entry.reference}
+                              </td>
+                              <td className="py-2.5 px-3 font-mono text-[11px] text-gray-700 text-center whitespace-nowrap border-l border-gray-400">
+                                {entry.formattedDate}
+                              </td>
+                              <td className="py-2.5 px-4 font-cairo text-gray-900 max-w-[200px] border-l border-gray-400 leading-relaxed text-right">
+                                <div className="font-bold">{entry.label}</div>
+                                {entry.notes && <div className="text-[10px] text-gray-600 truncate mt-0.5">{entry.notes}</div>}
+                              </td>
+                              <td className="py-2.5 px-4 font-mono font-black text-rose-800 text-center border-l border-gray-400 bg-rose-50/5">
+                                {entry.debit > 0 ? entry.debit.toLocaleString('en-US') : '---'}
+                              </td>
+                              <td className="py-2.5 px-4 font-mono font-black text-emerald-800 text-center border-l border-gray-400 bg-emerald-50/5">
+                                {entry.credit > 0 ? entry.credit.toLocaleString('en-US') : '---'}
+                              </td>
+                              <td className={`py-2.5 px-4 font-mono font-black text-center ${entry.runningBalance > 0.01 ? 'text-rose-800' : entry.runningBalance < -0.01 ? 'text-emerald-800' : 'text-gray-600'}`}>
+                                {entry.runningBalance.toLocaleString('en-US')} {statement?.currency}
+                              </td>
+                            </tr>
+                          ))
+                        )}
+                      </tbody>
+                    </table>
+                  </div>
+                </div>
               </div>
             )}
 
@@ -792,6 +944,17 @@ export default function PrintPreviewOverlay({
                       <p className="pt-4">المستلم المقر بما فيه /.............. التوقيع /.............</p>
                   </div>
                 </>
+              ) : type === 'statement' ? (
+                <>
+                  <div className="text-right space-y-1">
+                    <div>اسم مستلم الكشف: ........................................</div>
+                    <div className="pt-2">التوقيع والختم: ........................................</div>
+                  </div>
+                  <div className="text-left space-y-1 col-span-1">
+                    <div>اسم المختص المعتمد: ........................................</div>
+                    <div className="pt-2">التوقيع والختم: ........................................</div>
+                  </div>
+                </>
               ) : (
                 <>
                    {/* Right Side */}
@@ -829,9 +992,7 @@ export default function PrintPreviewOverlay({
                 </div>
               )}
               
-              <div className="text-gray-500 font-mono text-center flex-1">
-                 طبع في: {new Date().toLocaleDateString('ar-YE')} {new Date().toLocaleTimeString('ar-YE', { hour12: true, hour: '2-digit', minute: '2-digit' })}
-              </div>
+              <div className="flex-1"></div>
 
               {shopConfig?.facebookUrl && (
                 <div className="flex items-center gap-1.5 justify-center flex-row-reverse text-center w-max">

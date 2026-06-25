@@ -19,7 +19,9 @@ import {
   LogOut,
   Cpu,
   CircleDollarSign,
-  Wrench
+  Wrench,
+  ArrowRightLeft,
+  Clock
 } from 'lucide-react';
 import { collection, query, where, getDocs, addDoc, doc, getDoc, setDoc } from './firebase';
 import { db } from './firebase';
@@ -31,6 +33,7 @@ import EntryExit from './components/entry-exit';
 import DeviceMovement from './components/movement';
 import Inspection from './components/movement/Inspection';
 import Maintenance from './components/movement/Maintenance';
+import ApprovalAndParts from './components/movement/ApprovalAndParts';
 import Inventory from './components/Inventory';
 import Reports from './components/Reports';
 import Customers from './components/Customers';
@@ -220,6 +223,8 @@ export default function App() {
         return <EntryExit onBack={() => setActiveTab('dashboard')} user={user} />;
       case 'device-movement':
         return <DeviceMovement onBack={() => setActiveTab('dashboard')} user={user} />;
+      case 'approval':
+        return <ApprovalAndParts user={user} onBack={() => setActiveTab('dashboard')} />;
       case 'inspection':
         return <Inspection user={user} onBack={() => setActiveTab('dashboard')} />;
       case 'maintenance':
@@ -341,38 +346,47 @@ export default function App() {
           </div>
 
           {/* Bottom Navigation - Mobile Only */}
-          <nav className="md:hidden fixed bottom-0 left-0 right-0 z-50 bg-[#0f0f0f]/90 backdrop-blur-xl border-t border-white/5 py-2 px-6 flex items-center justify-around shadow-2xl mobile-bottom-nav">
+          <nav className="md:hidden fixed bottom-0 left-0 right-0 z-50 bg-[#0f0f0f]/90 backdrop-blur-xl border-t border-white/5 py-2 px-6 flex items-center justify-around shadow-2xl mobile-bottom-nav" dir="rtl">
             <MobileNavItem 
-              active={activeTab === 'dashboard'} 
-              onClick={() => setActiveTab('dashboard')} 
-              icon={<LayoutDashboard size={20} />} 
-              label={t('common.dashboard')}
+              active={activeTab === 'entry-exit'} 
+              onClick={() => setActiveTab('entry-exit')} 
+              icon={<ArrowRightLeft size={22} />} 
+              label="دخول وخروج"
+              colorClass="text-orange-500"
             />
             <MobileNavItem 
-              active={activeTab === 'inspection'} 
-              onClick={() => setActiveTab('inspection')} 
-              icon={<ClipboardCheck size={20} />} 
-              label="فحص"
+              active={activeTab === 'approval'} 
+              onClick={() => setActiveTab('approval')} 
+              icon={<Clock size={22} />} 
+              label="الموافقة والقطع"
+              colorClass="text-amber-500"
             />
             <div className="relative -top-3">
               <button 
-                onClick={() => setActiveTab('entry-exit')}
-                className="w-14 h-14 bg-orange-600 rounded-full flex items-center justify-center text-white shadow-xl shadow-orange-900/40 ring-4 ring-[#0f0f0f] mobile-center-btn"
+                onClick={() => setActiveTab('dashboard')}
+                className="w-14 h-14 bg-[#1a1a1a] rounded-full flex flex-col items-center justify-center shadow-xl ring-4 ring-[#0f0f0f] mobile-center-btn border border-white/5"
               >
-                <FilePlus size={24} />
+                <div className="grid grid-cols-2 gap-[2px] w-[20px] h-[20px]">
+                  <div className="bg-orange-600 rounded-[3px]"></div>
+                  <div className="bg-blue-600 rounded-[3px]"></div>
+                  <div className="bg-amber-500 rounded-[3px]"></div>
+                  <div className="bg-emerald-600 rounded-[3px]"></div>
+                </div>
               </button>
             </div>
             <MobileNavItem 
-              active={activeTab === 'maintenance'} 
-              onClick={() => setActiveTab('maintenance')} 
-              icon={<Wrench size={20} />} 
-              label="صيانة"
+              active={activeTab === 'inspection'} 
+              onClick={() => setActiveTab('inspection')} 
+              icon={<ClipboardCheck size={22} />} 
+              label="فحص"
+              colorClass="text-purple-500"
             />
             <MobileNavItem 
-              active={activeTab === 'settings'} 
-              onClick={() => setActiveTab('settings')} 
-              icon={<SettingsIcon size={20} />} 
-              label={t('common.settings')}
+              active={activeTab === 'maintenance'} 
+              onClick={() => setActiveTab('maintenance')} 
+              icon={<Wrench size={22} />} 
+              label="صيانة"
+              colorClass="text-emerald-500"
             />
           </nav>
         </main>
@@ -399,16 +413,16 @@ function NavItem({ active, onClick, icon, label }: { active: boolean, onClick: (
   );
 }
 
-function MobileNavItem({ active, onClick, icon, label }: { active: boolean, onClick: () => void, icon: React.ReactNode, label: string }) {
+function MobileNavItem({ active, onClick, icon, label, colorClass }: { active: boolean, onClick: () => void, icon: React.ReactNode, label: string, colorClass: string }) {
   return (
     <button 
       onClick={onClick}
-      className={`flex flex-col items-center gap-1 transition-all ${active ? 'text-orange-500' : 'text-gray-500'}`}
+      className={`flex flex-col items-center gap-1 transition-all ${active ? colorClass : 'text-gray-500'}`}
     >
-      <div className={`p-1.5 rounded-lg transition-colors ${active ? 'bg-orange-500/10' : ''}`}>
+      <div className={`p-1.5 rounded-lg transition-colors ${active ? 'bg-white/10 dark:bg-white/5 shadow-inner' : colorClass}`}>
         {icon}
       </div>
-      <span className="text-[9px] font-black uppercase tracking-tighter opacity-80">{label}</span>
+      <span className={`text-[9px] font-black uppercase tracking-tighter opacity-80 ${active ? colorClass : colorClass}`}>{label}</span>
     </button>
   );
 }

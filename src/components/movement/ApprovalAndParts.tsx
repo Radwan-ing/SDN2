@@ -8,6 +8,7 @@ import { Search, Loader2, X, Clock, Check, RefreshCw, ArrowUpRight, Save, Plus, 
 import BankAccountsFooter from '../BankAccountsFooter';
 import jsPDF from 'jspdf';
 import html2canvas from 'html2canvas';
+import { sanitizeDocumentStyles, sanitizeElementInlineStyles, cleanOklchInStyleText } from '../../lib/html2canvasHelper';
 
 const WhatsAppIcon = (props: React.SVGProps<SVGSVGElement>) => (
   <svg viewBox="0 0 24 24" width="24" height="24" fill="currentColor" {...props}>
@@ -71,6 +72,7 @@ export default function ApprovalAndParts({ user, onBack, initialInvoice }: { use
     const originalStyle = document.createElement('style');
     originalStyle.innerHTML = `
       @media print {
+        @page { size: auto; margin: 0; }
         body * {
           visibility: hidden !important;
         }
@@ -82,6 +84,8 @@ export default function ApprovalAndParts({ user, onBack, initialInvoice }: { use
           left: 0;
           top: 0;
           width: 100% !important;
+          margin: 0 !important;
+          padding: 10mm !important;
           color: #000000 !important;
           background-color: #ffffff !important;
         }
@@ -184,6 +188,9 @@ export default function ApprovalAndParts({ user, onBack, initialInvoice }: { use
       // Apply globally
       window.getComputedStyle = customGetComputedStyle;
 
+      await sanitizeDocumentStyles();
+      sanitizeElementInlineStyles(element);
+
       let clonedAreaHeight = 800; // fallback
 
       const canvas = await html2canvas(element, {
@@ -192,6 +199,13 @@ export default function ApprovalAndParts({ user, onBack, initialInvoice }: { use
         allowTaint: true,
         backgroundColor: '#ffffff',
         onclone: (clonedDoc) => {
+          const styles = clonedDoc.querySelectorAll('style');
+          styles.forEach((style) => {
+            if (style.textContent && (style.textContent.includes('oklch') || style.textContent.includes('oklab'))) {
+              style.textContent = cleanOklchInStyleText(style.textContent);
+            }
+          });
+
           const win = clonedDoc.defaultView;
           if (win) {
             win.getComputedStyle = customGetComputedStyle;
@@ -999,7 +1013,7 @@ export default function ApprovalAndParts({ user, onBack, initialInvoice }: { use
 
             {/* Content to print is simply the active print element or logic for it */}
             <div className="overflow-x-auto w-full pb-4 bg-white">
-              <div id="print-report-area" className="p-8 bg-white text-gray-900 print:p-0 print:bg-white print:text-black w-[794px] min-h-[1123px] mx-auto">
+              <div id="print-report-area" className="p-8 bg-white text-gray-900 print:p-0 print:bg-white print:text-black w-[794px] min-h-fit mx-auto">
                   {/* Header Layout */}
                   <div className="flex justify-between items-start border-b-2 border-gray-900 pb-4 mb-4">
                     {/* Right Corner: Shop Name */}
@@ -1781,7 +1795,7 @@ export default function ApprovalAndParts({ user, onBack, initialInvoice }: { use
 
               {/* Printable Section Box */}
               <div className="overflow-x-auto w-full pb-4">
-                <div id="print-report-area" className="p-8 bg-white text-gray-900 print:p-0 print:bg-white print:text-black w-[794px] min-h-[1123px] mx-auto">
+                <div id="print-report-area" className="p-8 bg-white text-gray-900 print:p-0 print:bg-white print:text-black w-[794px] min-h-fit mx-auto">
                     {/* Header Layout */}
                     <div className="flex justify-between items-start border-b-2 border-gray-900 pb-4 mb-4">
                       {/* Right Corner: Shop Name */}

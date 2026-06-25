@@ -1,4 +1,5 @@
 import { sharePdfFile } from '../lib/shareHelper';
+import PrintPreviewOverlay from './PrintPreviewOverlay';
 import React, { useState, useEffect } from 'react';
 import { motion } from 'motion/react';
 import { collection, onSnapshot, query, orderBy, doc, getDoc, setDoc, updateDoc, writeBatch, serverTimestamp } from '../firebase';
@@ -9,6 +10,7 @@ import BankAccountsFooter from './BankAccountsFooter';
 import { useTranslation } from 'react-i18next';
 import jsPDF from 'jspdf';
 import html2canvas from 'html2canvas';
+import { sanitizeDocumentStyles, sanitizeElementInlineStyles, cleanOklchInStyleText } from '../lib/html2canvasHelper';
 import { Filesystem, Directory } from '@capacitor/filesystem';
 
 const WhatsAppIcon = (props: React.SVGProps<SVGSVGElement>) => (
@@ -28,6 +30,7 @@ export default function Customers({ user, onBack }: { user: SystemUser; onBack?:
   const [isGeneratingPDF, setIsGeneratingPDF] = useState(false);
   const [shopConfig, setShopConfig] = useState<any>(null);
   const [currentOutput, setCurrentOutput] = useState<any>(null);
+  const [previewData, setPreviewData] = useState<{ type: 'voucher' | 'statement'; data: any } | null>(null);
 
   // Search/Autocomplete State
   const [search, setSearch] = useState('');
@@ -61,6 +64,14 @@ export default function Customers({ user, onBack }: { user: SystemUser; onBack?:
   const nextCustomerNumber = Math.max(0, ...customers.map(c => Number(c.customerNumber) || 0)) + 1;
 
   const isAddFormValid = addName.trim() !== '' && addPhone1.trim() !== '';
+
+  const getArabicCurrencyName = (currCode: string) => {
+    if (!currCode) return 'دولار';
+    if (currCode.toUpperCase() === 'USD') return 'دولار';
+    if (currCode.toUpperCase() === 'YER') return 'ريال يمني';
+    if (currCode.toUpperCase().includes('USD') && currCode.toUpperCase().includes('YER')) return 'دولار / ريال يمني';
+    return currCode;
+  };
 
   const handleAddCustomer = async () => {
     if (!isAddFormValid) return;
@@ -425,6 +436,9 @@ export default function Customers({ user, onBack }: { user: SystemUser; onBack?:
       // Apply globally
       window.getComputedStyle = customGetComputedStyle;
 
+      await sanitizeDocumentStyles();
+      sanitizeElementInlineStyles(element);
+
       let clonedAreaHeight = 800; // fallback
 
       const canvas = await html2canvas(element, {
@@ -433,6 +447,13 @@ export default function Customers({ user, onBack }: { user: SystemUser; onBack?:
         allowTaint: true,
         backgroundColor: '#ffffff',
         onclone: (clonedDoc) => {
+          const styles = clonedDoc.querySelectorAll('style');
+          styles.forEach((style) => {
+            if (style.textContent && (style.textContent.includes('oklch') || style.textContent.includes('oklab'))) {
+              style.textContent = cleanOklchInStyleText(style.textContent);
+            }
+          });
+
           const win = clonedDoc.defaultView;
           if (win) {
             win.getComputedStyle = customGetComputedStyle;
@@ -1657,7 +1678,54 @@ export default function Customers({ user, onBack }: { user: SystemUser; onBack?:
                       {/* WhatsApp Option */}
                       <button
                         onClick={() => {
-                          handleWhatsAppShare(selectedCustomer.id!);
+                          const entries = getStatementEntries(selectedCustomer.id!);
+                          const formattedEntries = entries.map((entry, index) => {
+                            const year = entry.date.getFullYear();
+                            const month = String(entry.date.getMonth() + 1).padStart(2, '0');
+                            const day = String(entry.date.getDate()).padStart(2, '0');
+                            const hours = String(entry.date.getHours()).padStart(2, '0');
+                            const minutes = String(entry.date.getMinutes()).padStart(2, '0');
+                            const formattedDate = `${year}/${month}/${day} ${hours}:${minutes}`;
+
+                            return {
+                              ...entry,
+                              formattedDate,
+                              debit: entry.debit,
+                              credit: entry.credit,
+                              runningBalance: entry.runningBalance
+                            };
+                          });
+
+                          const curr = getCustomerCurrencyLabel(selectedCustomer.id!);
+                          const arCurrency = getArabicCurrencyName(curr);
+
+                          // calculate balance and state
+                          let totalDebit = 0;
+                          let totalCredit = 0;
+                          entries.forEach(e => {
+                            totalDebit += e.debit;
+                            totalCredit += e.credit;
+                          });
+                          const diff = totalCredit - totalDebit;
+                          const isCreditor = diff > 0.01;
+                          const isDebtor = diff < -0.01;
+                          const balanceStatus = isCreditor ? 'دائن (له في الحساب)' : isDebtor ? 'مدين (متبقي عليه ديون)' : 'متزن الحساب';
+
+                          setPreviewData({
+                            type: 'statement',
+                            data: {
+                              statement: {
+                                customerName: selectedCustomer.name,
+                                companyName: selectedCustomer.companyName || '',
+                                customerPhone: selectedCustomer.phone1 || '',
+                                customerNumber: selectedCustomer.customerNumber || selectedCustomer.id?.substring(0, 5) || '',
+                                balance: diff,
+                                balanceStatus: balanceStatus,
+                                currency: arCurrency,
+                                entries: formattedEntries
+                              }
+                            }
+                          });
                           setShowPrintOptions(false);
                         }}
                         className="w-full text-right px-3 py-2.5 rounded-xl hover:bg-emerald-500/10 text-emerald-400 font-bold text-xs flex items-center justify-between gap-2 transition-all group cursor-pointer"
@@ -1672,7 +1740,54 @@ export default function Customers({ user, onBack }: { user: SystemUser; onBack?:
                       {/* Printer Option */}
                       <button
                         onClick={() => {
-                          window.print();
+                          const entries = getStatementEntries(selectedCustomer.id!);
+                          const formattedEntries = entries.map((entry, index) => {
+                            const year = entry.date.getFullYear();
+                            const month = String(entry.date.getMonth() + 1).padStart(2, '0');
+                            const day = String(entry.date.getDate()).padStart(2, '0');
+                            const hours = String(entry.date.getHours()).padStart(2, '0');
+                            const minutes = String(entry.date.getMinutes()).padStart(2, '0');
+                            const formattedDate = `${year}/${month}/${day} ${hours}:${minutes}`;
+
+                            return {
+                              ...entry,
+                              formattedDate,
+                              debit: entry.debit,
+                              credit: entry.credit,
+                              runningBalance: entry.runningBalance
+                            };
+                          });
+
+                          const curr = getCustomerCurrencyLabel(selectedCustomer.id!);
+                          const arCurrency = getArabicCurrencyName(curr);
+
+                          // calculate balance and state
+                          let totalDebit = 0;
+                          let totalCredit = 0;
+                          entries.forEach(e => {
+                            totalDebit += e.debit;
+                            totalCredit += e.credit;
+                          });
+                          const diff = totalCredit - totalDebit;
+                          const isCreditor = diff > 0.01;
+                          const isDebtor = diff < -0.01;
+                          const balanceStatus = isCreditor ? 'دائن (له في الحساب)' : isDebtor ? 'مدين (متبقي عليه ديون)' : 'متزن الحساب';
+
+                          setPreviewData({
+                            type: 'statement',
+                            data: {
+                              statement: {
+                                customerName: selectedCustomer.name,
+                                companyName: selectedCustomer.companyName || '',
+                                customerPhone: selectedCustomer.phone1 || '',
+                                customerNumber: selectedCustomer.customerNumber || selectedCustomer.id?.substring(0, 5) || '',
+                                balance: diff,
+                                balanceStatus: balanceStatus,
+                                currency: arCurrency,
+                                entries: formattedEntries
+                              }
+                            }
+                          });
                           setShowPrintOptions(false);
                         }}
                         className="w-full text-right px-3 py-2.5 rounded-xl hover:bg-purple-500/10 text-purple-400 font-bold text-xs flex items-center justify-between gap-2 transition-all group cursor-pointer"
@@ -1719,7 +1834,11 @@ export default function Customers({ user, onBack }: { user: SystemUser; onBack?:
                 const arCurrency = getArabicCurrencyName(curr);
 
                 return (
-                  <div id="print-area" className="w-[820px] mx-auto space-y-5 bg-white text-gray-900 p-8 rounded-2xl border border-gray-300 text-right font-cairo shadow-lg" dir="rtl">
+                  <div id="print-area" className="w-[820px] mx-auto space-y-5 bg-white text-gray-900 p-8 rounded-2xl border border-gray-300 text-right font-cairo shadow-lg relative" dir="rtl">
+                    {/* Faint print date and time watermark */}
+                    <div className="absolute left-8 top-3 text-[8px] text-gray-400 font-normal select-none opacity-45 font-mono pointer-events-none" dir="rtl">
+                      تاريخ ووقت الطباعة: {new Date().toLocaleDateString('ar-YE')} {new Date().toLocaleTimeString('ar-YE', { hour12: true, hour: '2-digit', minute: '2-digit' })}
+                    </div>
                     
                     {/* 1. Header (رأس الصفحة) & 2. Document Info (بيانات المرجع) */}
                     <div className="grid grid-cols-3 gap-4 items-start border-b-2 border-gray-950 pb-4 mb-3">
@@ -1975,7 +2094,7 @@ export default function Customers({ user, onBack }: { user: SystemUser; onBack?:
                     <div className="border-t-[3px] border-black my-2 border-solid"></div>
                     <div className="pt-2 font-cairo">
                       
-                      {/* Row 1: Real location & Date / Time and Copy number in one line */}
+                      {/* Row 1: Real location */}
                       <div className="flex items-center justify-between text-[10px] text-gray-800 font-bold pb-2 border-b border-gray-200">
                         <div>
                           {shopConfig?.address && (
@@ -1985,16 +2104,7 @@ export default function Customers({ user, onBack }: { user: SystemUser; onBack?:
                             </span>
                           )}
                         </div>
-                        
-                        <div className="flex items-center gap-2">
-                          <span>تاريخ ووقت الطباعة:</span>
-                          <span className="font-mono text-gray-900" dir="ltr">
-                            {new Date().toLocaleDateString('en-GB')} {new Date().toLocaleTimeString('en-US', { hour12: true, hour: '2-digit', minute: '2-digit' })}
-                          </span>
-                          <span className="text-gray-400">|</span>
-                          <span>رقم النسخة:</span>
-                          <span className="border border-gray-400 px-1.5 py-0.5 rounded bg-gray-50 font-mono text-[9px] font-black text-gray-900">1</span>
-                        </div>
+                        <div className="flex-1"></div>
                       </div>
 
                       {/* Row 2: Company bank accounts */}
@@ -2270,6 +2380,15 @@ export default function Customers({ user, onBack }: { user: SystemUser; onBack?:
             </div>
           </div>
         </div>
+      )}
+
+      {previewData && (
+        <PrintPreviewOverlay
+          type={previewData.type}
+          data={previewData.data}
+          onClose={() => setPreviewData(null)}
+          shopConfig={shopConfig}
+        />
       )}
 
     </div>

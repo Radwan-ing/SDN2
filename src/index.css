@@ -372,3 +372,54 @@ html.light-app .mobile-center-btn {
   box-shadow: 0 0 0 4px #ffffff, 0 10px 15px -3px rgba(249, 115, 22, 0.3) !important;
 }
 
+/* Printable Documents Table Cell & Counter Alignment Fixes */
+#print-preview-area th,
+#print-preview-area td,
+#print-report-area th,
+#print-report-area td,
+#print-area th,
+#print-area td {
+  vertical-align: middle !important;
+  line-height: 1.2 !important;
+  padding-top: 10px !important;
+  padding-bottom: 10px !important;
+}
+
+/* Ensure explicit text alignments are preserved inside tables */
+#print-preview-area th.text-right,
+#print-preview-area td.text-right,
+#print-report-area th.text-right,
+#print-report-area td.text-right,
+#print-area th.text-right,
+#print-area td.text-right {
+  text-align: right !important;
+}
+
+#print-preview-area th.text-center,
+#print-preview-area td.text-center,
+#print-report-area th.text-center,
+#print-report-area td.text-center,
+#print-area th.text-center,
+#print-area td.text-center {
+  text-align: center !important;
+}
+
+#print-preview-area th.text-left,
+#print-preview-area td.text-left,
+#print-report-area th.text-left,
+#print-report-area td.text-left,
+#print-area th.text-left,
+#print-area td.text-left {
+  text-align: left !important;
+}
+
+/* Specific centering tweak for numbers inside counter boxes to align perfectly */
+.w-12.h-8 {
+  display: inline-flex !important;
+  align-items: center !important;
+  justify-content: center !important;
+  line-height: 1 !important;
+  text-align: center !important;
+  padding: 0 !important;
+}
+

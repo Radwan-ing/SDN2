@@ -1,4 +1,5 @@
 import { sharePdfFile } from '../lib/shareHelper';
+import PrintPreviewOverlay from './PrintPreviewOverlay';
 import React, { useEffect, useState } from 'react';
 import { useTranslation } from 'react-i18next';
 import { localDb } from '../lib/local-db';
@@ -47,6 +48,7 @@ import {
 } from 'lucide-react';
 import jsPDF from 'jspdf';
 import html2canvas from 'html2canvas';
+import { sanitizeDocumentStyles, sanitizeElementInlineStyles, cleanOklchInStyleText } from '../lib/html2canvasHelper';
 import { Filesystem, Directory } from '@capacitor/filesystem';
 import { doc, getDoc, db } from '../firebase';
 
@@ -145,6 +147,7 @@ export default function Vault({ user, onBack }: { user: User; onBack: () => void
   const [showAddModal, setShowAddModal] = useState(false);
   const [showPrintPreview, setShowPrintPreview] = useState(false);
   const [isPosting, setIsPosting] = useState(false);
+  const [previewData, setPreviewData] = useState<{ type: 'voucher' | 'statement'; data: any } | null>(null);
   const [globalSearch, setGlobalSearch] = useState('');
   const [searchType, setSearchType] = useState<'name' | 'number'>('name');
 
@@ -186,6 +189,21 @@ export default function Vault({ user, onBack }: { user: User; onBack: () => void
   const [ledgerSearchTerm, setLedgerSearchTerm] = useState<string>('');
   const [showStatementModal, setShowStatementModal] = useState<boolean>(false);
   const [showPrintOptions, setShowPrintOptions] = useState<boolean>(false);
+
+  const getCustomerCurrencyLabel = (customerId: string) => {
+    const customerInvs = invoices.filter(inv => inv.customerId === customerId);
+    const currencies = Array.from(new Set(customerInvs.map(inv => inv.currency || 'USD')));
+    if (currencies.length === 0) return 'USD';
+    return currencies.join(' / ');
+  };
+
+  const getArabicCurrencyName = (currCode: string) => {
+    if (!currCode) return 'دولار';
+    if (currCode.toUpperCase() === 'USD') return 'دولار';
+    if (currCode.toUpperCase() === 'YER') return 'ريال يمني';
+    if (currCode.toUpperCase().includes('USD') && currCode.toUpperCase().includes('YER')) return 'دولار / ريال يمني';
+    return currCode;
+  };
   const [isGeneratingPDF, setIsGeneratingPDF] = useState<boolean>(false);
   const [shopConfig, setShopConfig] = useState<any>(null);
   const [currentOutput, setCurrentOutput] = useState<any>(null);
@@ -328,6 +346,7 @@ export default function Vault({ user, onBack }: { user: User; onBack: () => void
       const originalStyle = document.createElement('style');
       originalStyle.innerHTML = `
         @media print {
+          @page { size: auto; margin: 0; }
           body * { visibility: hidden !important; }
           #print-area, #print-area * { visibility: visible !important; }
           #print-area {
@@ -335,6 +354,8 @@ export default function Vault({ user, onBack }: { user: User; onBack: () => void
             left: 0;
             top: 0;
             width: 100% !important;
+            margin: 0 !important;
+            padding: 10mm !important;
             color: #000000 !important;
             background-color: #ffffff !important;
           }
@@ -396,6 +417,9 @@ export default function Vault({ user, onBack }: { user: User; onBack: () => void
 
             window.getComputedStyle = customGetComputedStyle as any;
 
+            await sanitizeDocumentStyles();
+            sanitizeElementInlineStyles(element);
+
             let clonedAreaHeight = 842;
             const canvas = await html2canvas(element, {
               scale: 2,
@@ -404,6 +428,13 @@ export default function Vault({ user, onBack }: { user: User; onBack: () => void
               backgroundColor: '#ffffff',
               logging: false,
               onclone: (clonedDoc) => {
+                const styles = clonedDoc.querySelectorAll('style');
+                styles.forEach((style) => {
+                  if (style.textContent && (style.textContent.includes('oklch') || style.textContent.includes('oklab'))) {
+                    style.textContent = cleanOklchInStyleText(style.textContent);
+                  }
+                });
+
                 const win = clonedDoc.defaultView;
                 if (win) {
                   win.getComputedStyle = customGetComputedStyle;
@@ -461,7 +492,7 @@ export default function Vault({ user, onBack }: { user: User; onBack: () => void
               pdf.addImage(imgData, 'JPEG', 0, position, pdfWidth, pdfHeight, undefined, 'FAST');
               heightLeft -= pdf.internal.pageSize.getHeight();
 
-              while (heightLeft >= 0) {
+              while (heightLeft > 0.5) {
                 position = heightLeft - pdfHeight;
                 pdf.addPage();
                 pdf.addImage(imgData, 'JPEG', 0, position, pdfWidth, pdfHeight, undefined, 'FAST');
@@ -924,6 +955,9 @@ export default function Vault({ user, onBack }: { user: User; onBack: () => void
       // Apply globally
       window.getComputedStyle = customGetComputedStyle;
 
+      await sanitizeDocumentStyles();
+      sanitizeElementInlineStyles(element);
+
       let clonedAreaHeight = 800; // fallback
 
       const canvas = await html2canvas(element, {
@@ -932,6 +966,13 @@ export default function Vault({ user, onBack }: { user: User; onBack: () => void
         allowTaint: true,
         backgroundColor: '#ffffff',
         onclone: (clonedDoc) => {
+          const styles = clonedDoc.querySelectorAll('style');
+          styles.forEach((style) => {
+            if (style.textContent && (style.textContent.includes('oklch') || style.textContent.includes('oklab'))) {
+              style.textContent = cleanOklchInStyleText(style.textContent);
+            }
+          });
+
           const win = clonedDoc.defaultView;
           if (win) {
             win.getComputedStyle = customGetComputedStyle;
@@ -1670,7 +1711,11 @@ export default function Vault({ user, onBack }: { user: User; onBack: () => void
                         }
                       }
                     `}</style>
-                    <div id="print-area" className="p-8 bg-white text-gray-900 print:p-0 print:bg-white print:text-black w-[794px] min-h-[1123px] mx-auto flex flex-col relative shrink-0 font-cairo text-right" dir="rtl">
+                    <div id="print-area" className="p-8 bg-white text-gray-900 print:p-0 print:bg-white print:text-black w-[794px] min-h-fit mx-auto flex flex-col relative shrink-0 font-cairo text-right" dir="rtl">
+                      {/* Faint print date and time watermark */}
+                      <div className="absolute left-8 top-3 text-[8px] text-gray-400 font-normal select-none opacity-45 font-mono pointer-events-none" dir="rtl">
+                        تاريخ ووقت الطباعة: {new Date().toLocaleDateString('ar-YE')} {new Date().toLocaleTimeString('ar-YE', { hour12: true, hour: '2-digit', minute: '2-digit' })}
+                      </div>
                       
                       {/* Header Box identical format to device inspection report */}
                       <div className="flex justify-between items-start border-b-2 border-gray-900 pb-4 mb-6">
@@ -1863,11 +1908,6 @@ export default function Vault({ user, onBack }: { user: User; onBack: () => void
 
                       <div className="mt-2">
                         <BankAccountsFooter shopConfig={shopConfig} currentOutput={currentOutput || { output_datetime: new Date() }} />
-                      </div>
-
-                      {/* Footer */}
-                      <div className="text-center text-[9px] text-gray-500 font-sans mt-4 pt-2 border-t border-gray-200">
-                        تاريخ الطباعة: {new Date().toLocaleString('ar-YE')} | النظام المحاسبي الموحد للخزائن والعهود
                       </div>
                     </div>
                   </div>
@@ -2955,7 +2995,49 @@ export default function Vault({ user, onBack }: { user: User; onBack: () => void
                       <button
                         type="button"
                         onClick={() => {
-                          handleWhatsAppShare(selectedLedgerCustomer.id!);
+                          const entries = getStatementEntries(ledgerCustomerId);
+                          const totalCost = totalInvoicesCost;
+                          const totalPaid = totalInvoicesPaid + totalSeparateCollections;
+                          const diff = totalPaid - totalCost;
+                          const isCreditor = diff > 0.01;
+                          const isDebtor = diff < -0.01;
+                          const balanceStatus = isCreditor ? 'دائن (له في الحساب)' : isDebtor ? 'مدين (متبقي عليه ديون)' : 'متزن الحساب';
+
+                          const formattedEntries = entries.map((entry, index) => {
+                            const year = entry.date.getFullYear();
+                            const month = String(entry.date.getMonth() + 1).padStart(2, '0');
+                            const day = String(entry.date.getDate()).padStart(2, '0');
+                            const hours = String(entry.date.getHours()).padStart(2, '0');
+                            const minutes = String(entry.date.getMinutes()).padStart(2, '0');
+                            const formattedDate = `${year}/${month}/${day} ${hours}:${minutes}`;
+
+                            return {
+                              ...entry,
+                              formattedDate,
+                              debit: entry.debit,
+                              credit: entry.credit,
+                              runningBalance: entry.runningBalance
+                            };
+                          });
+
+                          const curr = getCustomerCurrencyLabel(ledgerCustomerId);
+                          const arCurrency = getArabicCurrencyName(curr);
+
+                          setPreviewData({
+                            type: 'statement',
+                            data: {
+                              statement: {
+                                customerName: selectedLedgerCustomer.name,
+                                companyName: selectedLedgerCustomer.companyName || '',
+                                customerPhone: selectedLedgerCustomer.phone1 || '',
+                                customerNumber: selectedLedgerCustomer.customerNumber || selectedLedgerCustomer.id?.substring(0, 5) || '',
+                                balance: diff,
+                                balanceStatus: balanceStatus,
+                                currency: arCurrency,
+                                entries: formattedEntries
+                              }
+                            }
+                          });
                           setShowPrintOptions(false);
                         }}
                         className="w-full text-right px-3 py-2.5 rounded-xl hover:bg-emerald-500/10 text-emerald-400 font-bold text-xs flex items-center justify-between gap-2 transition-all group cursor-pointer"
@@ -2971,7 +3053,49 @@ export default function Vault({ user, onBack }: { user: User; onBack: () => void
                       <button
                         type="button"
                         onClick={() => {
-                          window.print();
+                          const entries = getStatementEntries(ledgerCustomerId);
+                          const totalCost = totalInvoicesCost;
+                          const totalPaid = totalInvoicesPaid + totalSeparateCollections;
+                          const diff = totalPaid - totalCost;
+                          const isCreditor = diff > 0.01;
+                          const isDebtor = diff < -0.01;
+                          const balanceStatus = isCreditor ? 'دائن (له في الحساب)' : isDebtor ? 'مدين (متبقي عليه ديون)' : 'متزن الحساب';
+
+                          const formattedEntries = entries.map((entry, index) => {
+                            const year = entry.date.getFullYear();
+                            const month = String(entry.date.getMonth() + 1).padStart(2, '0');
+                            const day = String(entry.date.getDate()).padStart(2, '0');
+                            const hours = String(entry.date.getHours()).padStart(2, '0');
+                            const minutes = String(entry.date.getMinutes()).padStart(2, '0');
+                            const formattedDate = `${year}/${month}/${day} ${hours}:${minutes}`;
+
+                            return {
+                              ...entry,
+                              formattedDate,
+                              debit: entry.debit,
+                              credit: entry.credit,
+                              runningBalance: entry.runningBalance
+                            };
+                          });
+
+                          const curr = getCustomerCurrencyLabel(ledgerCustomerId);
+                          const arCurrency = getArabicCurrencyName(curr);
+
+                          setPreviewData({
+                            type: 'statement',
+                            data: {
+                              statement: {
+                                customerName: selectedLedgerCustomer.name,
+                                companyName: selectedLedgerCustomer.companyName || '',
+                                customerPhone: selectedLedgerCustomer.phone1 || '',
+                                customerNumber: selectedLedgerCustomer.customerNumber || selectedLedgerCustomer.id?.substring(0, 5) || '',
+                                balance: diff,
+                                balanceStatus: balanceStatus,
+                                currency: arCurrency,
+                                entries: formattedEntries
+                              }
+                            }
+                          });
                           setShowPrintOptions(false);
                         }}
                         className="w-full text-right px-3 py-2.5 rounded-xl hover:bg-purple-500/10 text-purple-400 font-bold text-xs flex items-center justify-between gap-2 transition-all group cursor-pointer"
@@ -3270,6 +3394,15 @@ export default function Vault({ user, onBack }: { user: User; onBack: () => void
             </div>
           </div>
         </div>
+      )}
+
+      {previewData && (
+        <PrintPreviewOverlay
+          type={previewData.type}
+          data={previewData.data}
+          onClose={() => setPreviewData(null)}
+          shopConfig={shopConfig}
+        />
       )}
 
     </div>

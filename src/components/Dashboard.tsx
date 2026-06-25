@@ -18,7 +18,8 @@ import {
   Calendar,
   User as UserIcon,
   Tag,
-  Cpu
+  Cpu,
+  MoreVertical
 } from 'lucide-react';
 import { collection, query, where, getDocs, onSnapshot, orderBy } from '../firebase';
 import { db } from '../firebase';
@@ -62,6 +63,16 @@ export default function Dashboard({ onNavigate, shopName, fiscalYear }: { onNavi
 
   return (
     <div className="space-y-5 pb-10">
+      <div className="flex justify-between items-center mb-4 px-1">
+        <div className="text-xl font-bold font-cairo text-white tracking-tight">الرئيسية</div>
+        <button 
+          onClick={() => onNavigate('settings')}
+          className="p-2 bg-[#1a1a1a] hover:bg-white/10 rounded-full border border-white/5 transition-all"
+        >
+          <MoreVertical size={24} className="text-gray-400 hover:text-white" />
+        </button>
+      </div>
+
       {/* Top Area: Quick Search */}
       <div className="w-full">
         {/* Quick Search (البحث السريع) */}
