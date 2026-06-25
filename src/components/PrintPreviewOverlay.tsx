@@ -3,7 +3,7 @@ import { ArrowLeft, Printer, Share2, Smartphone, MessageCircle, Phone, Loader2, 
 import { jsPDF } from 'jspdf';
 import html2canvas from 'html2canvas';
 import { sharePdfFile } from '../lib/shareHelper';
-import { sanitizeDocumentStyles, sanitizeElementInlineStyles, cleanOklchInStyleText } from '../lib/html2canvasHelper';
+import { sanitizeDocumentStyles, sanitizeElementInlineStyles, cleanOklchInStyleText, restoreDocumentStyles } from '../lib/html2canvasHelper';
 
 type PrintTemplateType = 'entry' | 'exit' | 'inspection' | 'quotation' | 'assignment' | 'maintenance';
 
@@ -103,6 +103,7 @@ export default function PrintPreviewOverlay({
     setIsGeneratingPDF(true);
     const originalGetComputedStyle = window.getComputedStyle;
     let tempEl: HTMLDivElement | null = null;
+    let restoreStyles: (() => void) | null = null;
     try {
       const printArea = document.getElementById('print-preview-area');
       if (printArea) {
@@ -200,8 +201,8 @@ export default function PrintPreviewOverlay({
           }
         });
 
-        // Sanitize document styles and element inline styles first
-        await sanitizeDocumentStyles();
+        // Sanitize document styles and element inline styles first, capturing restore function
+        restoreStyles = await sanitizeDocumentStyles();
         sanitizeElementInlineStyles(printArea);
 
         const canvas = await html2canvas(printArea, { 
@@ -277,6 +278,11 @@ export default function PrintPreviewOverlay({
       setIsGeneratingPDF(false);
     } finally {
       window.getComputedStyle = originalGetComputedStyle;
+      if (restoreStyles) {
+        restoreStyles();
+      } else {
+        restoreDocumentStyles();
+      }
       if (tempEl && tempEl.parentNode) {
         tempEl.parentNode.removeChild(tempEl);
       }
@@ -617,59 +623,57 @@ export default function PrintPreviewOverlay({
                 <div className="space-y-2">
                   <span className="text-xs font-black text-gray-800 font-cairo block">العمليات والتحركات المالية (القيود مرتبة بتسلسل تاريخي):</span>
                   <div className="border border-gray-400 rounded-xl overflow-hidden bg-white text-xs">
-                    <table className="w-full border-collapse text-right select-none">
-                      <thead>
-                        <tr className="bg-white border-b-2 border-gray-400 text-gray-950 font-cairo font-black">
-                          <th className="py-2.5 px-3 text-center w-12 border-l border-gray-400">مـ</th>
-                          <th className="py-2.5 px-3 border-l border-gray-400 text-right">نوع الحركة</th>
-                          <th className="py-2.5 px-3 text-center border-l border-gray-400 w-24">رقم المرجع</th>
-                          <th className="py-2.5 px-3 text-center border-l border-gray-400 w-36">تاريخ ووقت القيد</th>
-                          <th className="py-2.5 px-4 border-l border-gray-400 text-right">البيان والتفاصيل</th>
-                          <th className="py-2.5 px-4 text-rose-800 text-center border-l border-gray-400 bg-rose-50/10 w-28">المستحق (مدين)</th>
-                          <th className="py-2.5 px-4 text-emerald-800 text-center border-l border-gray-400 bg-emerald-50/10 w-28">المقبوض (دائن)</th>
-                          <th className="py-2.5 px-4 text-center font-black bg-gray-50 w-32">الرصيد الجاري</th>
-                        </tr>
-                      </thead>
-                      <tbody className="divide-y divide-gray-400 font-bold">
+                    <div className="w-full text-right select-none border border-gray-400 rounded-xl overflow-hidden">
+                      {/* Header Row */}
+                      <div className="bg-white border-b-2 border-gray-400 text-gray-950 font-cairo font-black flex items-stretch text-xs">
+                        <div className="py-2.5 px-3 text-center w-12 border-l border-gray-400 flex items-center justify-center shrink-0">مـ</div>
+                        <div className="py-2.5 px-3 border-l border-gray-400 text-right flex-1 flex items-center justify-start">نوع الحركة</div>
+                        <div className="py-2.5 px-3 text-center border-l border-gray-400 w-24 flex items-center justify-center shrink-0" dir="ltr">رقم المرجع</div>
+                        <div className="py-2.5 px-3 text-center border-l border-gray-400 w-36 flex items-center justify-center shrink-0" dir="ltr">تاريخ ووقت القيد</div>
+                        <div className="py-2.5 px-4 border-l border-gray-400 text-right w-48 flex items-center justify-start shrink-0">البيان والتفاصيل</div>
+                        <div className="py-2.5 px-4 text-rose-800 text-center border-l border-gray-400 bg-rose-50/10 w-28 flex items-center justify-center shrink-0">المستحق (مدين)</div>
+                        <div className="py-2.5 px-4 text-emerald-800 text-center border-l border-gray-400 bg-emerald-50/10 w-28 flex items-center justify-center shrink-0">المقبوض (دائن)</div>
+                        <div className="py-2.5 px-4 text-center font-black bg-gray-50 w-32 flex items-center justify-center shrink-0">الرصيد الجاري</div>
+                      </div>
+                      {/* Body List */}
+                      <div className="divide-y divide-gray-400 font-bold">
                         {(statement?.entries || []).length === 0 ? (
-                          <tr>
-                            <td colSpan={8} className="py-8 text-center text-gray-500 font-cairo font-bold bg-white">
-                              لا يوجد أي قيود أو عمليات محاسبية مسجلة لهذا العميل حتى الآن.
-                            </td>
-                          </tr>
+                          <div className="py-8 text-center text-gray-500 font-cairo font-bold bg-white w-full">
+                            لا يوجد أي قيود أو عمليات محاسبية مسجلة لهذا العميل حتى الآن.
+                          </div>
                         ) : (
                           statement.entries.map((entry: any, index: number) => (
-                            <tr key={entry.id || index} className="hover:bg-gray-50 transition-all text-gray-950 bg-white">
-                              <td className="py-2.5 px-3 font-mono text-center text-gray-600 border-l border-gray-400 bg-gray-50/50">
+                            <div key={entry.id || index} className="hover:bg-gray-50 transition-all text-gray-950 bg-white flex items-stretch text-[11px]">
+                              <div className="py-2.5 px-3 font-mono text-center text-gray-600 border-l border-gray-400 bg-gray-50/50 w-12 flex items-center justify-center shrink-0">
                                 {index + 1}
-                              </td>
-                              <td className="py-2.5 px-3 font-cairo font-bold text-gray-900 border-l border-gray-400 text-right">
+                              </div>
+                              <div className="py-2.5 px-3 font-cairo font-bold text-gray-900 border-l border-gray-400 text-right flex-1 flex items-center justify-start">
                                 {entry.type}
-                              </td>
-                              <td className="py-2.5 px-3 font-mono font-bold text-gray-800 text-center border-l border-gray-400">
+                              </div>
+                              <div className="py-2.5 px-3 font-mono font-bold text-gray-800 text-center border-l border-gray-400 w-24 flex items-center justify-center shrink-0" dir="ltr">
                                 {entry.reference}
-                              </td>
-                              <td className="py-2.5 px-3 font-mono text-[11px] text-gray-700 text-center whitespace-nowrap border-l border-gray-400">
+                              </div>
+                              <div className="py-2.5 px-3 font-mono text-[11px] text-gray-700 text-center border-l border-gray-400 w-36 flex items-center justify-center shrink-0" dir="ltr">
                                 {entry.formattedDate}
-                              </td>
-                              <td className="py-2.5 px-4 font-cairo text-gray-900 max-w-[200px] border-l border-gray-400 leading-relaxed text-right">
-                                <div className="font-bold">{entry.label}</div>
-                                {entry.notes && <div className="text-[10px] text-gray-600 truncate mt-0.5">{entry.notes}</div>}
-                              </td>
-                              <td className="py-2.5 px-4 font-mono font-black text-rose-800 text-center border-l border-gray-400 bg-rose-50/5">
+                              </div>
+                              <div className="py-2.5 px-4 font-cairo text-gray-900 w-48 border-l border-gray-400 leading-relaxed text-right flex flex-col justify-center shrink-0 overflow-hidden">
+                                <div className="font-bold truncate w-full">{entry.label}</div>
+                                {entry.notes && <div className="text-[10px] text-gray-600 truncate mt-0.5 w-full">{entry.notes}</div>}
+                              </div>
+                              <div className="py-2.5 px-4 font-mono font-black text-rose-800 text-center border-l border-gray-400 bg-rose-50/5 w-28 flex items-center justify-center shrink-0" dir="ltr">
                                 {entry.debit > 0 ? entry.debit.toLocaleString('en-US') : '---'}
-                              </td>
-                              <td className="py-2.5 px-4 font-mono font-black text-emerald-800 text-center border-l border-gray-400 bg-emerald-50/5">
+                              </div>
+                              <div className="py-2.5 px-4 font-mono font-black text-emerald-800 text-center border-l border-gray-400 bg-emerald-50/5 w-28 flex items-center justify-center shrink-0" dir="ltr">
                                 {entry.credit > 0 ? entry.credit.toLocaleString('en-US') : '---'}
-                              </td>
-                              <td className={`py-2.5 px-4 font-mono font-black text-center ${entry.runningBalance > 0.01 ? 'text-rose-800' : entry.runningBalance < -0.01 ? 'text-emerald-800' : 'text-gray-600'}`}>
+                              </div>
+                              <div className={`py-2.5 px-4 font-mono font-black text-center w-32 flex items-center justify-center shrink-0 ${entry.runningBalance > 0.01 ? 'text-rose-800' : entry.runningBalance < -0.01 ? 'text-emerald-800' : 'text-gray-600'}`} dir="ltr">
                                 {entry.runningBalance.toLocaleString('en-US')} {statement?.currency}
-                              </td>
-                            </tr>
+                              </div>
+                            </div>
                           ))
                         )}
-                      </tbody>
-                    </table>
+                      </div>
+                    </div>
                   </div>
                 </div>
               </div>
@@ -677,34 +681,35 @@ export default function PrintPreviewOverlay({
 
             {type === 'invoice' && templateType === 'entry' && (
               <>
-                <table className="w-full text-center border-2 border-black mb-6">
-                  <thead className="bg-gray-100 text-black border-b-2 border-black">
-                    <tr>
-                      <th className="py-2 px-3 border border-black text-sm font-bold w-12 text-center">م</th>
-                      <th className="py-2 px-3 border border-black text-sm font-bold text-right w-48">النوع / الجهاز</th>
-                      <th className="py-2 px-3 border border-black text-sm font-bold text-right w-1/3">المشكلة (من وجهة نظر العميل)</th>
-                      <th className="py-2 px-3 border border-black text-sm font-bold text-right w-1/4">ملاحظات الاستلام</th>
-                      <th className="py-2 px-3 border border-black text-sm font-bold w-16">العدد</th>
-                    </tr>
-                  </thead>
-                  <tbody className="text-black font-bold">
+                <div className="w-full text-center border-2 border-black mb-6 text-black font-bold">
+                  {/* Header Row */}
+                  <div className="bg-gray-100 border-b-2 border-black flex items-stretch text-sm font-bold">
+                    <div className="py-2 px-3 border-l border-black w-12 flex items-center justify-center shrink-0">م</div>
+                    <div className="py-2 px-3 border-l border-black w-48 flex items-center justify-start shrink-0">النوع / الجهاز</div>
+                    <div className="py-2 px-3 border-l border-black flex-1 flex items-center justify-start">المشكلة (من وجهة نظر العميل)</div>
+                    <div className="py-2 px-3 border-l border-black w-1/4 flex items-center justify-start shrink-0">ملاحظات الاستلام</div>
+                    <div className="py-2 px-3 w-16 flex items-center justify-center shrink-0">العدد</div>
+                  </div>
+                  {/* Body List */}
+                  <div className="divide-y divide-black">
                     {items.map((it:any, idx:number) => (
-                      <tr key={idx} className="border-b border-black">
-                        <td className="py-3 px-3 border-l border-black text-xs font-mono">{idx + 1}</td>
-                        <td className="py-3 px-3 border-l border-black text-right whitespace-nowrap text-sm">
+                      <div key={idx} className="flex items-stretch min-h-[40px]">
+                        <div className="py-3 px-3 border-l border-black text-xs font-mono w-12 flex items-center justify-center shrink-0">{idx + 1}</div>
+                        <div className="py-3 px-3 border-l border-black text-right w-48 flex items-center justify-start shrink-0 whitespace-nowrap overflow-hidden text-ellipsis" dir="ltr">
                           {it.deviceType || '-'} - <span className="text-gray-600 text-[10px]">{it.deviceName || '-'}</span>
-                        </td>
-                        <td className="py-3 px-3 border-l border-black text-xs text-right whitespace-nowrap overflow-hidden max-w-[150px] text-ellipsis">{it.faultType || it.customerProblem || '-'}</td>
-                        <td className="py-3 px-3 border-l border-black text-xs text-right whitespace-nowrap overflow-hidden max-w-[150px] text-ellipsis">{it.deviceNotes || '-'}</td>
-                        <td className="py-3 px-3 text-sm font-bold font-mono">{it.quantity || 1}</td>
-                      </tr>
+                        </div>
+                        <div className="py-3 px-3 border-l border-black text-xs text-right flex-1 flex items-center justify-start whitespace-nowrap overflow-hidden text-ellipsis">{it.faultType || it.customerProblem || '-'}</div>
+                        <div className="py-3 px-3 border-l border-black text-xs text-right w-1/4 flex items-center justify-start shrink-0 whitespace-nowrap overflow-hidden text-ellipsis">{it.deviceNotes || '-'}</div>
+                        <div className="py-3 px-3 text-sm font-bold font-mono w-16 flex items-center justify-center shrink-0">{it.quantity || 1}</div>
+                      </div>
                     ))}
-                    <tr className="bg-gray-100 border-t-2 border-black">
-                      <td colSpan={4} className="py-3 px-4 border-l border-black text-left font-black text-sm">اجمالي الأجهزة المستلمة</td>
-                      <td className="py-3 px-3 text-lg font-black text-center font-mono">{items.reduce((sum:number, it:any) => sum + (Number(it.quantity) || 1), 0)}</td>
-                    </tr>
-                  </tbody>
-                </table>
+                    {/* Total Row */}
+                    <div className="bg-gray-100 border-t-2 border-black flex items-stretch min-h-[40px]">
+                      <div className="py-3 px-4 border-l border-black text-left font-black text-sm flex-1 flex items-center justify-start">اجمالي الأجهزة المستلمة</div>
+                      <div className="py-3 px-3 text-lg font-black text-center font-mono w-16 flex items-center justify-center shrink-0">{items.reduce((sum:number, it:any) => sum + (Number(it.quantity) || 1), 0)}</div>
+                    </div>
+                  </div>
+                </div>
                 <div className="text-[10px] text-gray-500 font-bold mb-6 text-center">
                   سيتم موافاتكم بتقرير الفحص الفني والتكاليف المبدئية في أقرب وقت.
                 </div>
@@ -713,219 +718,220 @@ export default function PrintPreviewOverlay({
 
             {type === 'invoice' && templateType === 'exit' && (
               <>
-                <table className="w-full text-center border-2 border-black mb-6">
-                  <thead className="bg-gray-100 text-black border-b-2 border-black">
-                    <tr>
-                      <th className="py-2 px-3 border border-black text-sm font-bold w-12 text-center">م</th>
-                      <th className="py-2 px-3 border border-black text-sm font-bold text-right w-48">النوع / الموديل</th>
-                      <th className="py-2 px-3 border border-black text-sm font-bold text-center">تكلفة الإصلاح</th>
-                      <th className="py-2 px-3 border border-black text-sm font-bold text-center">حالة الجهاز</th>
-                      <th className="py-2 px-3 border border-black text-sm font-bold text-center">الضمان</th>
-                      <th className="py-2 px-3 border border-black text-sm font-bold text-right">ملاحظات</th>
-                    </tr>
-                  </thead>
-                  <tbody className="text-black font-bold">
+                <div className="w-full text-center border-2 border-black mb-6 text-black font-bold">
+                  {/* Header Row */}
+                  <div className="bg-gray-100 border-b-2 border-black flex items-stretch text-sm font-bold">
+                    <div className="py-2 px-3 border-l border-black w-12 flex items-center justify-center shrink-0">م</div>
+                    <div className="py-2 px-3 border-l border-black w-48 flex items-center justify-start shrink-0">النوع / الموديل</div>
+                    <div className="py-2 px-3 border-l border-black w-28 flex items-center justify-center shrink-0">تكلفة الإصلاح</div>
+                    <div className="py-2 px-3 border-l border-black w-24 flex items-center justify-center shrink-0">حالة الجهاز</div>
+                    <div className="py-2 px-3 border-l border-black w-20 flex items-center justify-center shrink-0">الضمان</div>
+                    <div className="py-2 px-3 flex-1 flex items-center justify-start">ملاحظات</div>
+                  </div>
+                  {/* Body List */}
+                  <div className="divide-y divide-black">
                     {items.map((it:any, idx:number) => (
-                      <tr key={idx} className="border-b border-black">
-                        <td className="py-3 px-3 border-l border-black text-xs font-mono">{idx + 1}</td>
-                        <td className="py-3 px-3 border-l border-black text-right whitespace-nowrap text-sm">
+                      <div key={idx} className="flex items-stretch min-h-[40px]">
+                        <div className="py-3 px-3 border-l border-black text-xs font-mono w-12 flex items-center justify-center shrink-0">{idx + 1}</div>
+                        <div className="py-3 px-3 border-l border-black text-sm text-right w-48 flex items-center justify-start shrink-0 whitespace-nowrap overflow-hidden text-ellipsis" dir="ltr">
                           {it.deviceType} - {it.deviceName}
-                        </td>
-                        <td className="py-3 px-3 border-l border-black text-center font-mono text-sm group">
+                        </div>
+                        <div className="py-3 px-3 border-l border-black text-center font-mono text-sm w-28 flex items-center justify-center shrink-0" dir="ltr">
                           {Number(it.cost || 0).toLocaleString('en-US')}
-                        </td>
-                        <td className="py-3 px-3 border-l border-black text-xs text-center text-emerald-700 font-bold">
+                        </div>
+                        <div className="py-3 px-3 border-l border-black text-xs text-center text-emerald-700 font-bold w-24 flex items-center justify-center shrink-0">
                           {getStatusText(it.status || '50')}
-                        </td>
-                        <td className="py-3 px-3 border-l border-black text-xs text-center">
+                        </div>
+                        <div className="py-3 px-3 border-l border-black text-xs text-center w-20 flex items-center justify-center shrink-0">
                           {it.warrantyId ? 'مشمول' : 'لا يوجد'}
-                        </td>
-                        <td className="py-3 px-3 text-xs text-right text-gray-600 max-w-[150px] truncate">{it.technicalNotes || '-'}</td>
-                      </tr>
+                        </div>
+                        <div className="py-3 px-3 text-xs text-right text-gray-600 flex-1 flex items-center justify-start whitespace-nowrap overflow-hidden text-ellipsis">{it.technicalNotes || '-'}</div>
+                      </div>
                     ))}
-                  </tbody>
-                </table>
+                  </div>
+                </div>
                 
                 {/* Financial Summary Box */}
                 <div className="flex border-2 border-black rounded-lg overflow-hidden bg-gray-50 mb-6 font-mono font-black w-2/3 mr-auto">
-                    <div className="flex-1 p-3 text-center border-l-2 border-black bg-white">
-                      <div className="text-[10px] text-gray-500 font-sans mb-1">الإجمالي المستحق</div>
-                      <div className="text-lg text-gray-900">{Number(invoice.totalCost || 0).toLocaleString('en-US')} <span className="text-xs font-sans">ر.ي</span></div>
-                    </div>
-                    <div className="flex-1 p-3 text-center border-l-2 border-black bg-emerald-50 text-emerald-700">
-                      <div className="text-[10px] opacity-70 font-sans mb-1">المدفوع</div>
-                      <div className="text-lg">{Number(invoice.amountPaid || 0).toLocaleString('en-US')} <span className="text-xs font-sans">ر.ي</span></div>
-                    </div>
-                    <div className="flex-1 p-3 text-center bg-rose-50 text-rose-700">
-                      <div className="text-[10px] opacity-70 font-sans mb-1">المتبقي</div>
-                      <div className="text-lg">{(Number(invoice.totalCost || 0) - Number(invoice.amountPaid || 0)).toLocaleString('en-US')} <span className="text-xs font-sans">ر.ي</span></div>
-                    </div>
-                 </div>
+                  <div className="flex-1 p-3 text-center border-l-2 border-black bg-white">
+                    <div className="text-[10px] text-gray-500 font-sans mb-1">الإجمالي المستحق</div>
+                    <div className="text-lg text-gray-900">{Number(invoice.totalCost || 0).toLocaleString('en-US')} <span className="text-xs font-sans">ر.ي</span></div>
+                  </div>
+                  <div className="flex-1 p-3 text-center border-l-2 border-black bg-emerald-50 text-emerald-700">
+                    <div className="text-[10px] opacity-70 font-sans mb-1">المدفوع</div>
+                    <div className="text-lg">{Number(invoice.amountPaid || 0).toLocaleString('en-US')} <span className="text-xs font-sans">ر.ي</span></div>
+                  </div>
+                  <div className="flex-1 p-3 text-center bg-rose-50 text-rose-700">
+                    <div className="text-[10px] opacity-70 font-sans mb-1">المتبقي</div>
+                    <div className="text-lg">{(Number(invoice.totalCost || 0) - Number(invoice.amountPaid || 0)).toLocaleString('en-US')} <span className="text-xs font-sans">ر.ي</span></div>
+                  </div>
+                </div>
               </>
             )}
 
             {type === 'invoice' && templateType === 'inspection' && (
-              <table className="w-full text-center border-2 border-black mb-6">
-                <thead className="bg-gray-100 text-black border-b-2 border-black">
-                  <tr>
-                    <th className="py-2 px-2 border border-black text-sm font-bold w-10 text-center">م</th>
-                    <th className="py-2 px-2 border border-black text-sm font-bold text-right w-40">الجهاز</th>
-                    <th className="py-2 px-2 border border-black text-sm font-bold text-right w-1/4">المشكلة</th>
-                    <th className="py-2 px-2 border border-black text-sm font-bold text-right w-1/4">التقرير الفني</th>
-                    <th className="py-2 px-2 border border-black text-sm font-bold text-center">القرار</th>
-                    <th className="py-2 px-2 border border-black text-sm font-bold text-center w-24">التكلفة المتوقعة</th>
-                  </tr>
-                </thead>
-                <tbody className="text-black font-bold">
+              <div className="w-full text-center border-2 border-black mb-6 text-black font-bold">
+                {/* Header Row */}
+                <div className="bg-gray-100 border-b-2 border-black flex items-stretch text-sm font-bold">
+                  <div className="py-2 px-2 border-l border-black w-10 flex items-center justify-center shrink-0">م</div>
+                  <div className="py-2 px-2 border-l border-black w-40 flex items-center justify-start shrink-0">الجهاز</div>
+                  <div className="py-2 px-2 border-l border-black w-1/4 flex items-center justify-start shrink-0">المشكلة</div>
+                  <div className="py-2 px-2 border-l border-black flex-1 flex items-center justify-start">التقرير الفني</div>
+                  <div className="py-2 px-2 border-l border-black w-24 flex items-center justify-center shrink-0">القرار</div>
+                  <div className="py-2 px-2 w-28 flex items-center justify-center shrink-0">التكلفة المتوقعة</div>
+                </div>
+                {/* Body List */}
+                <div className="divide-y divide-black">
                   {items.map((it:any, idx:number) => (
-                    <tr key={idx} className="border-b border-black">
-                      <td className="py-3 px-2 border-l border-black text-[10px] font-mono">{idx + 1}</td>
-                      <td className="py-3 px-2 border-l border-black text-right whitespace-nowrap text-xs">
+                    <div key={idx} className="flex items-stretch min-h-[40px]">
+                      <div className="py-3 px-2 border-l border-black text-[10px] font-mono w-10 flex items-center justify-center shrink-0">{idx + 1}</div>
+                      <div className="py-3 px-2 border-l border-black text-right text-xs w-40 flex items-center justify-start shrink-0 whitespace-nowrap overflow-hidden text-ellipsis" dir="ltr">
                         {it.deviceType} <span className="text-gray-500 text-[10px]">- {it.deviceName}</span>
-                      </td>
-                      <td className="py-3 px-2 border-l border-black text-[11px] text-right whitespace-nowrap overflow-hidden max-w-[150px] text-ellipsis">{it.faultType || it.customerProblem || '-'}</td>
-                      <td className="py-3 px-2 border-l border-black text-[11px] text-right text-emerald-800 whitespace-nowrap overflow-hidden max-w-[150px] text-ellipsis">{it.technicalNotes || '-'}</td>
-                      <td className="py-3 px-2 border-l border-black text-xs text-center text-blue-700">
+                      </div>
+                      <div className="py-3 px-2 border-l border-black text-[11px] text-right w-1/4 flex items-center justify-start shrink-0 whitespace-nowrap overflow-hidden text-ellipsis">{it.faultType || it.customerProblem || '-'}</div>
+                      <div className="py-3 px-2 border-l border-black text-[11px] text-right text-emerald-800 flex-1 flex items-center justify-start whitespace-nowrap overflow-hidden text-ellipsis">{it.technicalNotes || '-'}</div>
+                      <div className="py-3 px-2 border-l border-black text-xs text-center text-blue-700 w-24 flex items-center justify-center shrink-0">
                          {['40','50'].includes(it.status) ? 'موافق' : 'بانتظار الرد'}
-                      </td>
-                      <td className="py-3 px-2 text-center font-mono text-sm">
+                      </div>
+                      <div className="py-3 px-2 text-center font-mono text-sm w-28 flex items-center justify-center shrink-0" dir="ltr">
                         {Number(it.cost || 0).toLocaleString('en-US')}
-                      </td>
-                    </tr>
+                      </div>
+                    </div>
                   ))}
-                  <tr className="bg-gray-100 border-t-2 border-black">
-                    <td colSpan={5} className="py-3 px-4 border-l border-black text-left font-black text-sm">إجمالي التكلفة المتوقعة لعملية الصيانة</td>
-                    <td className="py-3 px-2 text-base font-black text-center font-mono">{items.reduce((sum:number, it:any) => sum + Number(it.cost || 0), 0).toLocaleString('en-US')}</td>
-                  </tr>
-                </tbody>
-              </table>
+                  {/* Total Row */}
+                  <div className="bg-gray-100 border-t-2 border-black flex items-stretch min-h-[40px]">
+                    <div className="py-3 px-4 border-l border-black text-left font-black text-sm flex-1 flex items-center justify-start">إجمالي التكلفة المتوقعة لعملية الصيانة</div>
+                    <div className="py-3 px-2 text-base font-black text-center font-mono w-28 flex items-center justify-center shrink-0" dir="ltr">{items.reduce((sum:number, it:any) => sum + Number(it.cost || 0), 0).toLocaleString('en-US')}</div>
+                  </div>
+                </div>
+              </div>
             )}
 
             {type === 'invoice' && templateType === 'quotation' && (
               <>
-                <table className="w-full text-right border-collapse text-sm mb-6 border-2 border-black">
-                  <thead className="bg-gray-100 text-gray-900 font-black border-b-2 border-black">
-                    <tr>
-                      <th className="px-3 py-3 text-center border-l-2 border-black w-12 text-xs">م</th>
-                      <th className="px-3 py-3 border-l-2 border-black text-xs">البيان ומواصفات الإصلاح</th>
-                      <th className="px-3 py-3 text-center border-l-2 border-black text-xs">الكمية</th>
-                      <th className="px-3 py-3 text-center border-l-2 border-black text-xs">سعر الوحدة</th>
-                      <th className="px-3 py-3 text-center font-bold text-xs">الإجمالي</th>
-                    </tr>
-                  </thead>
-                  <tbody className="divide-y divide-gray-300 font-bold align-top">
+                <div className="w-full text-right text-sm mb-6 border-2 border-black text-gray-900 font-bold">
+                  {/* Header Row */}
+                  <div className="bg-gray-100 border-b-2 border-black font-black flex items-stretch text-xs">
+                    <div className="px-3 py-3 text-center border-l-2 border-black w-12 flex items-center justify-center shrink-0">م</div>
+                    <div className="px-3 py-3 border-l-2 border-black flex-1 flex items-center justify-start">البيان ومواصفات الإصلاح</div>
+                    <div className="px-3 py-3 text-center border-l-2 border-black w-20 flex items-center justify-center shrink-0">الكمية</div>
+                    <div className="px-3 py-3 text-center border-l-2 border-black w-28 flex items-center justify-center shrink-0">سعر الوحدة</div>
+                    <div className="px-3 py-3 text-center font-bold w-28 flex items-center justify-center shrink-0">الإجمالي</div>
+                  </div>
+                  {/* Body List */}
+                  <div className="divide-y divide-black">
                     {items.map((it:any, idx:number) => {
                       const qty = Number(it.quantity || 1);
                       const tCost = Number(it.cost || 0);
                       const unit = qty > 0 ? tCost / qty : 0;
                       return (
-                        <tr key={idx} className="border-b border-black">
-                          <td className="px-3 py-4 text-center font-mono border-l-2 border-black">{idx+1}</td>
-                          <td className="px-3 py-4 border-l-2 border-black text-sm whitespace-nowrap overflow-hidden max-w-[200px] text-ellipsis">
+                        <div key={idx} className="flex items-stretch min-h-[44px]">
+                          <div className="px-3 py-4 text-center font-mono border-l-2 border-black w-12 flex items-center justify-center shrink-0">{idx+1}</div>
+                          <div className="px-3 py-4 border-l-2 border-black text-sm flex-1 flex items-center justify-start whitespace-nowrap overflow-hidden text-ellipsis" dir="ltr">
                             {it.deviceType || '-'} - {it.deviceName || '-'}
-                            {it.technicalNotes && <span className="text-gray-600 text-[10px] mr-2">- {it.technicalNotes}</span>}
-                          </td>
-                          <td className="px-3 py-4 text-center font-mono border-l-2 border-black">{qty}</td>
-                          <td className="px-3 py-4 text-center font-mono border-l-2 border-black">{unit.toLocaleString('en-US')}</td>
-                          <td className="px-3 py-4 text-center font-mono text-gray-900">{tCost.toLocaleString('en-US')}</td>
-                        </tr>
+                            {it.technicalNotes && <span className="text-gray-600 text-[10px] mr-2" dir="rtl">- {it.technicalNotes}</span>}
+                          </div>
+                          <div className="px-3 py-4 text-center font-mono border-l-2 border-black w-20 flex items-center justify-center shrink-0" dir="ltr">{qty}</div>
+                          <div className="px-3 py-4 text-center font-mono border-l-2 border-black w-28 flex items-center justify-center shrink-0" dir="ltr">{unit.toLocaleString('en-US')}</div>
+                          <div className="px-3 py-4 text-center font-mono text-gray-900 w-28 flex items-center justify-center shrink-0" dir="ltr">{tCost.toLocaleString('en-US')}</div>
+                        </div>
                       );
                     })}
-                    <tr className="bg-gray-100 font-bold border-t-2 border-black">
-                      <td colSpan={4} className="px-3 py-4 text-left font-black border-l-2 border-black text-base">إجمالي العرض (المبلغ المستحق)</td>
-                      <td className="px-3 py-4 text-center font-mono font-black text-xl text-gray-900">
-                        {Number(invoice.totalCost || 0).toLocaleString('en-US')} <span className="text-xs font-sans mr-1">{invoice.currency || 'USD'}</span>
-                      </td>
-                    </tr>
-                  </tbody>
-                </table>
+                    {/* Total Row */}
+                    <div className="bg-gray-100 font-bold border-t-2 border-black flex items-stretch min-h-[44px]">
+                      <div className="px-3 py-4 text-left font-black border-l-2 border-black text-base flex-1 flex items-center justify-start">إجمالي العرض (المبلغ المستحق)</div>
+                      <div className="px-3 py-4 text-center font-mono font-black text-xl text-gray-900 w-28 flex items-center justify-center shrink-0" dir="ltr">
+                        {Number(invoice.totalCost || 0).toLocaleString('en-US')} <span className="text-xs font-sans mr-1" dir="rtl">{invoice.currency || 'USD'}</span>
+                      </div>
+                    </div>
+                  </div>
+                </div>
                 <div className="text-xs text-gray-600 font-bold mb-6 italic">
-                  * هذا العرض صالح لمدة 14 يوماً من تاريخ إصداره وتظل الأسعار قابلة للتغير بناءً على توفر قطع الغيار.
+                  * هذا العرض صالح لمدة 14 يوماً من تاريخ إصدارها وتظل الأسعار قابلة للتغير بناءً على توفر قطع الغيار.
                 </div>
               </>
             )}
 
             {type === 'invoice' && templateType === 'assignment' && (
-              <table className="w-full text-center border-2 border-black mb-6">
-                <thead className="bg-gray-100 text-black border-b-2 border-black">
-                  <tr>
-                    <th className="py-2 px-2 border border-black text-sm font-bold w-10">م</th>
-                    <th className="py-2 px-2 border border-black text-sm font-bold text-right">الجهاز</th>
-                    <th className="py-2 px-2 border border-black text-sm font-bold text-right">المشكلة / العطل</th>
-                    <th className="py-2 px-2 border border-black text-sm font-bold text-center">المهندس المسند إليه</th>
-                    <th className="py-2 px-2 border border-black text-sm font-bold text-center w-24">ملاحظات</th>
-                  </tr>
-                </thead>
-                <tbody className="text-black font-bold">
+              <div className="w-full text-center border-2 border-black mb-6 text-black font-bold">
+                {/* Header Row */}
+                <div className="bg-gray-100 border-b-2 border-black flex items-stretch text-sm font-bold">
+                  <div className="py-2 px-2 border-l border-black w-10 flex items-center justify-center shrink-0">م</div>
+                  <div className="py-2 px-2 border-l border-black w-48 flex items-center justify-start shrink-0">الجهاز</div>
+                  <div className="py-2 px-2 border-l border-black flex-1 flex items-center justify-start">المشكلة / العطل</div>
+                  <div className="py-2 px-2 border-l border-black w-40 flex items-center justify-center shrink-0">المهندس المسند إليه</div>
+                  <div className="py-2 px-2 w-32 flex items-center justify-center shrink-0">ملاحظات</div>
+                </div>
+                {/* Body List */}
+                <div className="divide-y divide-black">
                   {items.map((it:any, idx:number) => (
-                    <tr key={idx} className="border-b border-black">
-                      <td className="py-3 px-2 border-l border-black text-xs font-mono">{idx + 1}</td>
-                      <td className="py-3 px-2 border-l border-black text-right whitespace-nowrap text-sm">
+                    <div key={idx} className="flex items-stretch min-h-[40px]">
+                      <div className="py-3 px-2 border-l border-black text-xs font-mono w-10 flex items-center justify-center shrink-0">{idx + 1}</div>
+                      <div className="py-3 px-2 border-l border-black text-right text-sm w-48 flex items-center justify-start shrink-0 whitespace-nowrap overflow-hidden text-ellipsis" dir="ltr">
                         {it.deviceType} <span className="text-gray-500 text-xs">- {it.deviceName}</span>
-                      </td>
-                      <td className="py-3 px-2 border-l border-black text-xs text-right whitespace-nowrap overflow-hidden max-w-[150px] text-ellipsis">{it.faultType || it.customerProblem || '-'}</td>
-                      <td className="py-3 px-2 border-l border-black text-sm text-center text-blue-700">
+                      </div>
+                      <div className="py-3 px-2 border-l border-black text-xs text-right flex-1 flex items-center justify-start whitespace-nowrap overflow-hidden text-ellipsis">{it.faultType || it.customerProblem || '-'}</div>
+                      <div className="py-3 px-2 border-l border-black text-sm text-center text-blue-700 w-40 flex items-center justify-center shrink-0">
                         {it.technician || '-'}
-                      </td>
-                      <td className="py-3 px-2 text-center text-[10px] text-gray-600 truncate max-w-[150px]">
+                      </div>
+                      <div className="py-3 px-2 text-center text-[10px] text-gray-600 w-32 flex items-center justify-center shrink-0 whitespace-nowrap overflow-hidden text-ellipsis">
                         {it.deviceNotes || '-'}
-                      </td>
-                    </tr>
+                      </div>
+                    </div>
                   ))}
-                </tbody>
-              </table>
+                </div>
+              </div>
             )}
 
             {type === 'invoice' && templateType === 'maintenance' && (
-              <table className="w-full text-center border-2 border-black mb-6">
-                <thead className="bg-gray-100 text-black border-b-2 border-black">
-                  <tr>
-                    <th className="py-2 px-2 border border-black text-sm font-bold w-10">م</th>
-                    <th className="py-2 px-2 border border-black text-sm font-bold text-right">الجهاز</th>
-                    <th className="py-2 px-2 border border-black text-sm font-bold text-right w-1/4">الشكوى</th>
-                    <th className="py-2 px-2 border border-black text-sm font-bold text-right w-1/4">تقرير الإصلاح الفني</th>
-                    <th className="py-2 px-2 border border-black text-sm font-bold text-center">النتيجة</th>
-                    <th className="py-2 px-2 border border-black text-sm font-bold text-center">قطع غيار</th>
-                  </tr>
-                </thead>
-                <tbody className="text-black font-bold">
+              <div className="w-full text-center border-2 border-black mb-6 text-black font-bold">
+                {/* Header Row */}
+                <div className="bg-gray-100 border-b-2 border-black flex items-stretch text-sm font-bold">
+                  <div className="py-2 px-2 border-l border-black w-10 flex items-center justify-center shrink-0">م</div>
+                  <div className="py-2 px-2 border-l border-black w-40 flex items-center justify-start shrink-0">الجهاز</div>
+                  <div className="py-2 px-2 border-l border-black w-1/4 flex items-center justify-start shrink-0">الشكوى</div>
+                  <div className="py-2 px-2 border-l border-black flex-1 flex items-center justify-start">تقرير الإصلاح الفني</div>
+                  <div className="py-2 px-2 border-l border-black w-24 flex items-center justify-center shrink-0">النتيجة</div>
+                  <div className="py-2 px-2 w-24 flex items-center justify-center shrink-0">قطع غيار</div>
+                </div>
+                {/* Body List */}
+                <div className="divide-y divide-black">
                   {items.map((it:any, idx:number) => (
-                    <tr key={idx} className="border-b border-black">
-                      <td className="py-3 px-2 border-l border-black text-xs font-mono">{idx + 1}</td>
-                      <td className="py-3 px-2 border-l border-black text-right whitespace-nowrap text-xs">
+                    <div key={idx} className="flex items-stretch min-h-[40px]">
+                      <div className="py-3 px-2 border-l border-black text-xs font-mono w-10 flex items-center justify-center shrink-0">{idx + 1}</div>
+                      <div className="py-3 px-2 border-l border-black text-right text-xs w-40 flex items-center justify-start shrink-0 whitespace-nowrap overflow-hidden text-ellipsis" dir="ltr">
                         {it.deviceType} - {it.deviceName}
-                      </td>
-                      <td className="py-3 px-2 border-l border-black text-[11px] text-right whitespace-nowrap overflow-hidden max-w-[120px] text-ellipsis">{it.faultType || it.customerProblem || '-'}</td>
-                      <td className="py-3 px-2 border-l border-black text-[11px] text-right whitespace-nowrap overflow-hidden max-w-[120px] text-ellipsis">{it.technicalNotes || '-'}</td>
-                      <td className={`py-3 px-2 border-l border-black text-xs text-center font-black ${['50','60'].includes(it.status) ? 'text-emerald-600' : 'text-orange-600'}`}>
-                        {getStatusText(it.status)}
-                      </td>
-                      <td className="py-3 px-2 text-center text-[11px] text-gray-700">
-                        {it.partsUsed ? it.partsUsed.length + ' قطع' : 'لا يوجد'}
-                      </td>
-                    </tr>
-                  ))}
-                  <tr className="bg-gray-100 border-t-2 border-black">
-                    <td colSpan={6} className="py-3 px-4 font-black text-sm text-center tracking-widest text-gray-700">
-                      تم استكمال صيانة الأجهزة بناءً على التشخيص الفني الموضح أعلاه.
-                      <div className="flex justify-center gap-6 mt-3 text-sm font-bold text-gray-900 border-t border-gray-300 pt-3">
-                        <div className="flex items-center gap-2">
-                          <span>إجمالي الأجهزة:</span>
-                          <span className="font-mono text-lg">{items.length}</span>
-                        </div>
-                        <div className="flex items-center gap-2 text-emerald-700">
-                          <span>جاهز:</span>
-                          <span className="font-mono text-lg">{items.filter((i:any) => ['50','60'].includes(i.status)).length}</span>
-                        </div>
-                        <div className="flex items-center gap-2 text-rose-700">
-                          <span>لا يصلح:</span>
-                          <span className="font-mono text-lg">{items.filter((i:any) => i.status === '55').length}</span>
-                        </div>
                       </div>
-                    </td>
-                  </tr>
-                </tbody>
-              </table>
+                      <div className="py-3 px-2 border-l border-black text-[11px] text-right w-1/4 flex items-center justify-start shrink-0 whitespace-nowrap overflow-hidden text-ellipsis">{it.faultType || it.customerProblem || '-'}</div>
+                      <div className="py-3 px-2 border-l border-black text-[11px] text-right flex-1 flex items-center justify-start whitespace-nowrap overflow-hidden text-ellipsis">{it.technicalNotes || '-'}</div>
+                      <div className={`py-3 px-2 border-l border-black text-xs text-center font-black w-24 flex items-center justify-center shrink-0 ${['50','60'].includes(it.status) ? 'text-emerald-600' : 'text-orange-600'}`}>
+                        {getStatusText(it.status)}
+                      </div>
+                      <div className="py-3 px-2 text-center text-[11px] text-gray-700 w-24 flex items-center justify-center shrink-0 whitespace-nowrap overflow-hidden text-ellipsis">
+                        {it.partsUsed ? it.partsUsed.length + ' قطع' : 'لا يوجد'}
+                      </div>
+                    </div>
+                  ))}
+                  {/* Total summary info */}
+                  <div className="bg-gray-100 border-t-2 border-black p-4 font-black text-sm text-center tracking-widest text-gray-700 w-full">
+                    تم استكمال صيانة الأجهزة بناءً على التشخيص الفني الموضح أعلاه.
+                    <div className="flex justify-center gap-6 mt-3 text-sm font-bold text-gray-900 border-t border-gray-300 pt-3">
+                      <div className="flex items-center gap-2">
+                        <span>إجمالي الأجهزة:</span>
+                        <span className="font-mono text-lg">{items.length}</span>
+                      </div>
+                      <div className="flex items-center gap-2 text-emerald-700">
+                        <span>جاهز:</span>
+                        <span className="font-mono text-lg">{items.filter((i:any) => ['50','60'].includes(i.status)).length}</span>
+                      </div>
+                      <div className="flex items-center gap-2 text-rose-700">
+                        <span>لا يصلح:</span>
+                        <span className="font-mono text-lg">{items.filter((i:any) => i.status === '55').length}</span>
+                      </div>
+                    </div>
+                  </div>
+                </div>
+              </div>
             )}
           </div>
 

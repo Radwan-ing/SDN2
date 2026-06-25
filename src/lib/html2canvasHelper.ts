@@ -32,11 +32,48 @@ export const sanitizeElementInlineStyles = (element: HTMLElement) => {
   });
 };
 
-export const sanitizeDocumentStyles = async (): Promise<void> => {
+let styleBackups: Array<{ element: HTMLStyleElement; originalText: string }> = [];
+let linkBackups: Array<{ element: HTMLLinkElement; parent: Node | null; nextSibling: Node | null }> = [];
+let createdStyles: HTMLStyleElement[] = [];
+
+export const restoreDocumentStyles = (): void => {
+  // 1. Restore original style tags text content
+  styleBackups.forEach((backup) => {
+    backup.element.textContent = backup.originalText;
+  });
+
+  // 2. Remove dynamically created style tags
+  createdStyles.forEach((style) => {
+    if (style && style.parentNode) {
+      style.remove();
+    }
+  });
+
+  // 3. Put original link tags back
+  linkBackups.forEach((backup) => {
+    if (backup.parent && !document.head.contains(backup.element) && !document.body.contains(backup.element)) {
+      backup.parent.insertBefore(backup.element, backup.nextSibling);
+    }
+  });
+
+  // Clear backups
+  styleBackups = [];
+  linkBackups = [];
+  createdStyles = [];
+};
+
+export const sanitizeDocumentStyles = async (): Promise<() => void> => {
+  // Clear any previous backups before starting
+  restoreDocumentStyles();
+
   // 1. Sanitize all <style> tags
   const styles = document.querySelectorAll('style');
   styles.forEach((style) => {
     if (style.textContent && (style.textContent.includes('oklch') || style.textContent.includes('oklab'))) {
+      styleBackups.push({
+        element: style,
+        originalText: style.textContent
+      });
       style.textContent = cleanOklchInStyleText(style.textContent);
     }
   });
@@ -55,12 +92,21 @@ export const sanitizeDocumentStyles = async (): Promise<void> => {
         style.textContent = text;
         style.setAttribute('data-sanitized', 'true');
         document.head.appendChild(style);
+        createdStyles.push(style);
         
-        // Remove or disable original link so it doesn't get parsed
+        linkBackups.push({
+          element: link as HTMLLinkElement,
+          parent: link.parentNode,
+          nextSibling: link.nextSibling
+        });
+        
+        // Remove original link so it doesn't get parsed
         link.remove();
       }
     } catch (e) {
       console.error('Error sanitizing link stylesheet:', e);
     }
   }
+
+  return restoreDocumentStyles;
 };
