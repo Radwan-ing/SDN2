@@ -584,7 +584,7 @@ export default function ApprovalAndParts({ user, onBack, initialInvoice }: { use
       setActionItems([]);
       setEditingIndex(null);
       if (invoiceSpecItems.length > 0) {
-        setCurrentFormRow({ id: invoiceSpecItems[0].id!, count: invoiceSpecItems[0].quantity, outcome: 'approved', reason: 'تمت الموافقة' });
+        setCurrentFormRow({ id: invoiceSpecItems[0].id!, count: invoiceSpecItems[0].quantity, outcome: 'approved', reason: 'توفرت قطع الغيار' });
       }
       return;
     }
@@ -730,9 +730,9 @@ export default function ApprovalAndParts({ user, onBack, initialInvoice }: { use
     if (availableItem) {
         const used = newActionItems.reduce((acc, row) => row.id === availableItem.id ? acc + row.count : acc, 0);
         const remQty = Math.max(0, availableItem.quantity - used);
-        setCurrentFormRow({ id: availableItem.id!, count: remQty, outcome: 'approved', reason: 'تمت الموافقة' });
+        setCurrentFormRow({ id: availableItem.id!, count: remQty, outcome: 'approved', reason: subTab === 'parts' ? 'توفرت قطع الغيار' : 'تمت الموافقة' });
     } else {
-        setCurrentFormRow({ id: '', count: '', outcome: 'approved', reason: 'تمت الموافقة' });
+        setCurrentFormRow({ id: '', count: '', outcome: 'approved', reason: subTab === 'parts' ? 'توفرت قطع الغيار' : 'تمت الموافقة' });
     }
   };
 
@@ -1323,7 +1323,14 @@ export default function ApprovalAndParts({ user, onBack, initialInvoice }: { use
                  <label className="text-xs text-gray-400 font-bold whitespace-nowrap w-20 shrink-0 self-center">تفاصيل الرد</label>
                  <input 
                    type="text"
-                   value={currentFormRow.reason} onFocus={e => e.target.select()}
+                   value={currentFormRow.reason}
+                   onFocus={(e) => {
+                     e.target.select();
+                     e.target.scrollIntoView({ behavior: 'smooth', block: 'center' });
+                   }}
+                   onClick={(e) => {
+                     e.currentTarget.select();
+                   }}
                    onChange={e => handleUpdateCurrentForm('reason', e.target.value)}
                    placeholder="الرجاء كتابة تفاصيل الرد"
                    className="flex-1 bg-black/40 border border-white/10 rounded-xl px-4 py-3 focus:border-amber-500 outline-none transition-all text-sm text-right text-white box-border"
@@ -1523,46 +1530,62 @@ export default function ApprovalAndParts({ user, onBack, initialInvoice }: { use
   }
 
   // STANDARD LIST VIEW: "صفحة انتظار الموافقة والقطع" (Dual View via subTabs)
-  return (
-    <div className="max-w-6xl mx-auto space-y-6 pb-20 text-right font-sans" dir="rtl">
-      {/* Unified Header */}
-      <div className="flex flex-col sm:flex-row items-center justify-between px-4 py-3 border-b border-white/10 bg-black/20 gap-4" dir="rtl">
-        <div className="flex items-center gap-2 self-start sm:self-auto">
-          {onBack && (
-            <button onClick={onBack} className="p-1.5 bg-white/5 hover:bg-white/10 text-gray-400 hover:text-white rounded-xl transition-all">
-              <ArrowLeft size={18} className="rtl:rotate-180" />
-            </button>
-          )}
-          <h2 className="text-lg font-black text-white flex items-center gap-2 m-0 p-0">
-             <Clock size={18} className="text-amber-500 animate-pulse" />
-             انتظار الموافقة والقطع
-          </h2>
-        </div>
+  const countApprovalDevices = items.filter(i => ['30', 'awaiting_approval'].includes(i.status) && i.quantity > 0).reduce((sum, i) => sum + (Number(i.quantity) || 0), 0);
+  const countPartsDevices = items.filter(i => ['35', 'awaiting_parts'].includes(i.status) && i.quantity > 0).reduce((sum, i) => sum + (Number(i.quantity) || 0), 0);
 
-        {/* Dual Tab Controls */}
-        <div className="flex bg-black/40 p-1.5 rounded-2xl border border-white/5 w-full sm:w-auto max-w-sm gap-2 mt-2 sm:mt-0">
-          <button 
-            type="button"
-            onClick={() => { setSubTab('approval'); setSearch(''); setDecisions({}); }}
-            className={`flex-grow sm:flex-none py-2 px-4 rounded-xl text-xs font-bold text-center transition-all cursor-pointer ${
-              subTab === 'approval' 
-                ? 'bg-amber-500 text-black shadow-lg shadow-amber-500/10' 
-                : 'text-gray-400 hover:text-white hover:bg-white/5'
-            }`}
-          >
-            انتظار الموافقة من العميل
-          </button>
-          <button 
-            type="button"
-            onClick={() => { setSubTab('parts'); setSearch(''); setDecisions({}); }}
-            className={`flex-grow sm:flex-none py-2 px-4 rounded-xl text-xs font-bold text-center transition-all cursor-pointer ${
-              subTab === 'parts' 
-                ? 'bg-amber-500 text-black shadow-lg shadow-amber-500/10' 
-                : 'text-gray-400 hover:text-white hover:bg-white/5'
-            }`}
-          >
-            انتظار قطع الغيار
-          </button>
+  return (
+    <div className="max-w-6xl mx-auto space-y-6 pb-20 text-right font-sans px-4 pt-4" dir="rtl">
+      {/* Large Orange/Amber Dual Stats Counter Card */}
+      <div className="px-0">
+        <div className="w-full bg-gradient-to-br from-amber-600 via-orange-600 to-amber-700 text-white p-6 rounded-[2rem] shadow-lg relative overflow-hidden">
+          {/* Faint Background Icon */}
+          <div className="absolute top-1/2 left-6 -translate-y-1/2 opacity-10 pointer-events-none">
+            <Clock size={160} />
+          </div>
+
+          <div className="relative z-10 grid grid-cols-2 divide-x divide-white/15 rtl:divide-x-reverse">
+            {/* Clickable section 1: Waiting for Customer Approval */}
+            <button
+              onClick={() => {
+                setSubTab('approval');
+                setSearch('');
+                setDecisions({});
+              }}
+              className={`flex flex-col items-center justify-center py-4 px-2 transition-all rounded-2xl relative cursor-pointer ${
+                subTab === 'approval' 
+                  ? 'bg-white/15 shadow-inner scale-[1.02]' 
+                  : 'hover:bg-white/5 opacity-80 hover:opacity-100'
+              }`}
+            >
+              {subTab === 'approval' && (
+                <span className="absolute top-3 right-3 w-2.5 h-2.5 bg-emerald-400 rounded-full animate-ping" />
+              )}
+              <span className="text-3xl sm:text-5xl font-black font-mono tracking-wider drop-shadow-md">{countApprovalDevices}</span>
+              <span className="text-xs sm:text-sm font-bold font-cairo mt-2 text-amber-100">بانتظار موافقة العميل</span>
+              <span className="text-[10px] text-amber-200 mt-1 opacity-70">الموافقة على تكلفة الصيانة</span>
+            </button>
+
+            {/* Clickable section 2: Waiting for Spare Parts */}
+            <button
+              onClick={() => {
+                setSubTab('parts');
+                setSearch('');
+                setDecisions({});
+              }}
+              className={`flex flex-col items-center justify-center py-4 px-2 transition-all rounded-2xl relative cursor-pointer ${
+                subTab === 'parts' 
+                  ? 'bg-white/15 shadow-inner scale-[1.02]' 
+                  : 'hover:bg-white/5 opacity-80 hover:opacity-100'
+              }`}
+            >
+              {subTab === 'parts' && (
+                <span className="absolute top-3 right-3 w-2.5 h-2.5 bg-emerald-400 rounded-full animate-ping" />
+              )}
+              <span className="text-3xl sm:text-5xl font-black font-mono tracking-wider drop-shadow-md">{countPartsDevices}</span>
+              <span className="text-xs sm:text-sm font-bold font-cairo mt-2 text-amber-100">بانتظار قطع الغيار</span>
+              <span className="text-[10px] text-amber-200 mt-1 opacity-70">تأمين المواد اللازمة</span>
+            </button>
+          </div>
         </div>
       </div>
 

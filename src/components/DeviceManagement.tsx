@@ -495,7 +495,7 @@ export default function DeviceManagement({ user, onBack }: { user: User; onBack:
   }
 
   return (
-    <div className="space-y-4 pb-12 text-right" dir="rtl">
+    <div className={`space-y-4 pb-12 text-right ${subview === 'hub' ? 'pt-4' : ''}`} dir="rtl">
       {/* Toast Alert Banner */}
       <AnimatePresence>
         {toastMessage && (
@@ -512,36 +512,38 @@ export default function DeviceManagement({ user, onBack }: { user: User; onBack:
       </AnimatePresence>
 
       {/* Unified Header */}
-      <div className="flex items-center px-4 py-3 border-b border-white/10 bg-black/20">
-        <div className="flex items-center gap-2">
-          <button 
-            type="button"
-            onClick={() => {
-              if (subview === 'hub') onBack();
-              else if (subview === 'admin_correction_action') setSubview('admin_correction');
-              else setSubview('hub');
-            }}
-            className="p-1.5 bg-white/5 hover:bg-white/10 text-gray-400 hover:text-white rounded-xl transition-all"
-            title={subview === 'hub' ? 'الرجوع للرئيسية' : 'رجوع لإدارة الأجهزة'}
-          >
-            <ArrowLeft size={18} className="rtl:rotate-180" />
-          </button>
-          <div>
-            <h1 className="text-lg font-black text-white m-0 p-0">إدارة وحوكمة الأجهزة</h1>
-            <p className="text-[10px] text-gray-500 font-bold m-0 p-0 leading-none mt-1">
-              {subview === 'active_devices' 
-                ? 'مراقبة والتحكم بالأجهزة النشطة وعملياتها' 
-                : subview === 'delivered' 
-                  ? 'أرشيف وحصيلة الأجهزة المسلمة للزبائن' 
-                  : subview === 'admin_correction' 
-                    ? 'لوحة تحكم وتصحيح أخطاء مدخلي البيانات للتحكم بالحسابات والأسعار والمقادير والجهاز'
-                    : subview === 'admin_correction_action'
-                      ? 'إجراء وتعديل حالات الفاتورة والأجهزة المحددة وإعادة ضبط التكلفة والعدد'
-                      : 'تصفح ومراقبة العمليات والتحكم بحالات الأجهزة النشطة والجاهزة مع تقارير التسليم'}
-            </p>
+      {subview !== 'hub' && (
+        <div className="flex items-center px-4 py-3 border-b border-white/10 bg-black/20">
+          <div className="flex items-center gap-2">
+            <button 
+              type="button"
+              onClick={() => {
+                if (subview === 'hub') onBack();
+                else if (subview === 'admin_correction_action') setSubview('admin_correction');
+                else setSubview('hub');
+              }}
+              className="p-1.5 bg-white/5 hover:bg-white/10 text-gray-400 hover:text-white rounded-xl transition-all"
+              title={subview === 'hub' ? 'الرجوع للرئيسية' : 'رجوع لإدارة الأجهزة'}
+            >
+              <ArrowLeft size={18} className="rtl:rotate-180" />
+            </button>
+            <div>
+              <h1 className="text-lg font-black text-white m-0 p-0">إدارة وحوكمة الأجهزة</h1>
+              <p className="text-[10px] text-gray-500 font-bold m-0 p-0 leading-none mt-1">
+                {subview === 'active_devices' 
+                  ? 'مراقبة والتحكم بالأجهزة النشطة وعملياتها' 
+                  : subview === 'delivered' 
+                    ? 'أرشيف وحصيلة الأجهزة المسلمة للزبائن' 
+                    : subview === 'admin_correction' 
+                      ? 'لوحة تحكم وتصحيح أخطاء مدخلي البيانات للتحكم بالحسابات والأسعار والمقادير والجهاز'
+                      : subview === 'admin_correction_action'
+                        ? 'إجراء وتعديل حالات الفاتورة والأجهزة المحددة وإعادة ضبط التكلفة والعدد'
+                        : 'تصفح ومراقبة العمليات والتحكم بحالات الأجهزة النشطة والجاهزة مع تقارير التسليم'}
+              </p>
+            </div>
           </div>
         </div>
-      </div>
+      )}
 
       {/* Hub View containing beautiful 3-grid controller */}
       {subview === 'hub' && (

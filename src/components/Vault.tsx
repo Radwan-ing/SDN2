@@ -1248,28 +1248,7 @@ export default function Vault({ user, onBack }: { user: User; onBack: () => void
   return (
     <div className="financial-vault-container h-full flex flex-col gap-4 overflow-hidden text-right pb-4 max-w-7xl mx-auto" dir="rtl">
       
-      {/* Unified Header */}
-      {activeSegment !== 'dashboard' && !showAddModal && (
-        <div className="flex items-center px-4 py-3 border-b border-white/10 bg-black/20">
-          <div className="flex items-center gap-2">
-            {onBack && (
-              <button 
-                type="button"
-                onClick={onBack}
-                className="p-1.5 bg-white/5 hover:bg-white/10 text-gray-400 hover:text-white rounded-xl transition-all"
-              >
-                <ArrowLeft size={18} className="rtl:rotate-180" />
-              </button>
-            )}
-            <div>
-              <h1 className="text-lg font-black text-white m-0 p-0">{t('vault.title', 'إدارة وتحركات الحسابات المالية')}</h1>
-              <p className="text-[10px] text-gray-500 font-bold m-0 p-0 leading-none mt-1">
-                {t('vault.subtitle', 'سندات الصرف والقبض، تدفقات الصناديق المتكاملة، حسابات العملاء التفصيلية، والتقارير المالية.')}
-              </p>
-            </div>
-          </div>
-        </div>
-      )}
+
 
       {/* Notifications banner */}
       {successMsg && (
@@ -1414,15 +1393,7 @@ export default function Vault({ user, onBack }: { user: User; onBack: () => void
               <div>
                 <h3 className="text-[11px] font-bold text-gray-400 uppercase tracking-widest mb-4 font-cairo text-right pr-1">{t('vault.treeTitle', 'شجرة النظام المالي')}</h3>
                 
-                <button 
-                  onClick={onBack}
-                  className="w-full flex items-center justify-between p-3 px-5 bg-[#181818]/80 hover:bg-white/5 rounded-2xl border border-white/5 transition-all group mb-6 text-right"
-                >
-                  <div className="flex items-center gap-3">
-                     <ArrowRight size={16} className="text-gray-400 group-hover:text-amber-500 transition-colors" />
-                     <span className="text-xs font-bold text-gray-300 font-cairo">{t('vault.backToMain', 'العودة للرئيسية')}</span>
-                  </div>
-                </button>
+
 
                 <div className="space-y-3">
                    <div className="px-1 text-[11px] font-bold text-[#e5e7eb]/40 uppercase tracking-wider font-cairo text-right mb-2">{t('vault.transferSection', 'سندات التحويل المالي')}</div>

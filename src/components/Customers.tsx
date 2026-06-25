@@ -836,22 +836,7 @@ export default function Customers({ user, onBack }: { user: SystemUser; onBack?:
   const currentCustomers = allProcessedCustomers.slice((safeCurrentPage - 1) * itemsPerPage, safeCurrentPage * itemsPerPage);
 
   return (
-    <div className="text-right -mx-4 md:-mx-8 pb-24 md:pb-6" dir="rtl">
-      {/* Sleek, Full-Width Page Header */}
-      <div className="flex items-center px-4 py-3 border-b border-white/10 bg-black/20">
-        <div className="flex items-center gap-2">
-          {onBack && (
-            <button 
-              type="button"
-              onClick={onBack}
-              className="p-1.5 bg-white/5 hover:bg-white/10 text-gray-400 hover:text-white rounded-xl transition-all"
-            >
-              <ArrowLeft size={18} className="rtl:rotate-180" />
-            </button>
-          )}
-          <h1 className="text-lg font-black text-white m-0 p-0">{t('common.customers', 'العملاء')}</h1>
-        </div>
-      </div>
+    <div className="text-right pb-24 md:pb-6 px-4 pt-4" dir="rtl">
 
 
       {/* Add Customer Form Panel */}

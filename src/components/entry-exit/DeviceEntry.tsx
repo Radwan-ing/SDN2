@@ -1,5 +1,5 @@
 import { sharePdfFile } from '../../lib/shareHelper';
-import { useState, useEffect } from 'react';
+import { useState, useEffect, useRef } from 'react';
 import { 
   Plus, 
   Trash2, 
@@ -61,6 +61,9 @@ export default function DeviceEntry({ onBack, user }: { onBack: () => void, user
 
   // Form State
   const [customer, setCustomer] = useState({ name: '', phone1: '', phone2: '', notes: '' });
+  const [keyboardMode, setKeyboardMode] = useState<Record<string, 'none' | 'text'>>({});
+  const isRefocusing = useRef<Record<string, boolean>>({});
+  const focusInitiated = useRef<Record<string, boolean>>({});
   const [existingCustomers, setExistingCustomers] = useState<Customer[]>([]);
   const [selectedCustomerId, setSelectedCustomerId] = useState<string | null>(null);
   const [showCustomerSearch, setShowCustomerSearch] = useState(false);
@@ -919,13 +922,39 @@ export default function DeviceEntry({ onBack, user }: { onBack: () => void, user
                         <div className="relative flex-1">
                           <input 
                             type="text" 
+                            inputMode={keyboardMode.customerName || 'none'}
                             value={customer.name}
                             onChange={(e) => {
                               setCustomer({ ...customer, name: e.target.value });
                               setShowCustomerSearch(true);
                             }}
-                            onFocus={() => setShowCustomerSearch(true)}
-                            onBlur={() => setTimeout(() => setShowCustomerSearch(false), 200)}
+                            onClick={(e) => {
+                              if (focusInitiated.current.customerName) {
+                                focusInitiated.current.customerName = false;
+                              } else if (keyboardMode.customerName !== 'text') {
+                                isRefocusing.current.customerName = true;
+                                setKeyboardMode(p => ({...p, customerName: 'text'}));
+                                const target = e.currentTarget;
+                                target.blur();
+                                setTimeout(() => {
+                                  target.focus();
+                                  isRefocusing.current.customerName = false;
+                                }, 50);
+                              }
+                            }}
+                            onFocus={(e) => {
+                              setShowCustomerSearch(true);
+                              e.target.scrollIntoView({ behavior: 'smooth', block: 'center' });
+                              focusInitiated.current.customerName = true;
+                            }}
+                            onBlur={() => {
+                              if (isRefocusing.current.customerName) return;
+                              setTimeout(() => {
+                                setShowCustomerSearch(false);
+                                focusInitiated.current.customerName = false;
+                                setKeyboardMode(p => ({...p, customerName: 'none'}));
+                              }, 200);
+                            }}
                             className="w-full bg-black border border-white/10 rounded-xl px-3 py-2 focus:border-orange-500 outline-none transition-all text-sm font-bold text-white text-right"
                             placeholder={t('addInvoice.enterOrSearch')}
                           />
@@ -1044,14 +1073,40 @@ export default function DeviceEntry({ onBack, user }: { onBack: () => void, user
                        <label className="text-xs text-gray-500 uppercase font-black tracking-widest text-right w-20 shrink-0">نوع الجهاز *</label>
                        <div className="relative flex-1">
                          <input 
+                           inputMode={keyboardMode.deviceType || 'none'}
                            value={currentDevice.deviceType || ''}
                            onChange={(e) => {
                              setCurrentDevice({ ...currentDevice, deviceType: e.target.value, deviceName: '' });
                              setActiveAutocomplete({ index: 0, type: 'deviceType' });
                            }}
-                           onFocus={() => setActiveAutocomplete({ index: 0, type: 'deviceType' })}
-                           onClick={() => setActiveAutocomplete({ index: 0, type: 'deviceType' })}
-                           onBlur={() => setTimeout(() => setActiveAutocomplete(prev => prev?.type === 'deviceType' ? null : prev), 200)}
+                           onClick={(e) => {
+                             setActiveAutocomplete({ index: 0, type: 'deviceType' });
+                             if (focusInitiated.current.deviceType) {
+                                focusInitiated.current.deviceType = false;
+                              } else if (keyboardMode.deviceType !== 'text') {
+                               isRefocusing.current.deviceType = true;
+                               setKeyboardMode(p => ({...p, deviceType: 'text'}));
+                               const target = e.currentTarget;
+                               target.blur();
+                               setTimeout(() => {
+                                 target.focus();
+                                 isRefocusing.current.deviceType = false;
+                               }, 50);
+                             }
+                           }}
+                           onFocus={(e) => {
+                              setActiveAutocomplete({ index: 0, type: 'deviceType' });
+                              e.target.scrollIntoView({ behavior: 'smooth', block: 'center' });
+                              focusInitiated.current.deviceType = true;
+                            }}
+                           onBlur={() => {
+                             if (isRefocusing.current.deviceType) return;
+                             setTimeout(() => {
+                                setActiveAutocomplete(prev => prev?.type === 'deviceType' ? null : prev);
+                                focusInitiated.current.deviceType = false;
+                              }, 200);
+                             setTimeout(() => setKeyboardMode(p => ({...p, deviceType: 'none'})), 200);
+                           }}
                            className="w-full bg-black border border-white/10 rounded-xl px-3 py-2 focus:border-orange-500 outline-none text-sm font-bold text-white text-right"
                            placeholder="اكتب أو ابحث..."
                          />
@@ -1089,14 +1144,40 @@ export default function DeviceEntry({ onBack, user }: { onBack: () => void, user
                        <label className="text-xs text-gray-500 uppercase font-black tracking-widest text-right w-20 shrink-0">اسم الجهاز</label>
                        <div className="relative flex-1">
                          <input 
+                           inputMode={keyboardMode.deviceName || 'none'}
                            value={currentDevice.deviceName || ''}
                            onChange={(e) => {
                              setCurrentDevice({ ...currentDevice, deviceName: e.target.value });
                              setActiveAutocomplete({ index: 0, type: 'deviceName' });
                            }}
-                           onFocus={() => setActiveAutocomplete({ index: 0, type: 'deviceName' })}
-                           onClick={() => setActiveAutocomplete({ index: 0, type: 'deviceName' })}
-                           onBlur={() => setTimeout(() => setActiveAutocomplete(prev => prev?.type === 'deviceName' ? null : prev), 200)}
+                           onClick={(e) => {
+                             setActiveAutocomplete({ index: 0, type: 'deviceName' });
+                             if (focusInitiated.current.deviceName) {
+                                focusInitiated.current.deviceName = false;
+                              } else if (keyboardMode.deviceName !== 'text') {
+                               isRefocusing.current.deviceName = true;
+                               setKeyboardMode(p => ({...p, deviceName: 'text'}));
+                               const target = e.currentTarget;
+                               target.blur();
+                               setTimeout(() => {
+                                 target.focus();
+                                 isRefocusing.current.deviceName = false;
+                               }, 50);
+                             }
+                           }}
+                           onFocus={(e) => {
+                              setActiveAutocomplete({ index: 0, type: 'deviceName' });
+                              e.target.scrollIntoView({ behavior: 'smooth', block: 'center' });
+                              focusInitiated.current.deviceName = true;
+                            }}
+                           onBlur={() => {
+                             if (isRefocusing.current.deviceName) return;
+                             setTimeout(() => {
+                                setActiveAutocomplete(prev => prev?.type === 'deviceName' ? null : prev);
+                                focusInitiated.current.deviceName = false;
+                              }, 200);
+                             setTimeout(() => setKeyboardMode(p => ({...p, deviceName: 'none'})), 200);
+                           }}
                            className="w-full bg-black border border-white/10 rounded-xl px-3 py-2 focus:border-orange-500 outline-none text-sm text-white text-right"
                            placeholder="ابحث او اكتب..."
                          />
@@ -1153,10 +1234,14 @@ export default function DeviceEntry({ onBack, user }: { onBack: () => void, user
                     </div>
 
                     <div className="flex items-center gap-3 lg:col-span-2">
-                       <label className="text-xs text-gray-500 uppercase font-black tracking-widest text-right w-20 shrink-0">المشكلة *</label>
+                       <label className="text-xs text-gray-500 uppercase font-black tracking-widest text-right w-20 shrink-0">شكوى العميل *</label>
                        <input 
                          value={currentDevice.faultType || ''}
                          onChange={(e) => setCurrentDevice({...currentDevice, faultType: e.target.value })}
+                         onFocus={(e) => {
+                            e.target.select();
+                            e.target.scrollIntoView({ behavior: 'smooth', block: 'center' });
+                         }}
                          className="w-full bg-black border border-white/10 rounded-xl px-3 py-2 focus:border-orange-500 outline-none text-sm text-white text-right flex-1"
                          placeholder="يحتاج صيانة..."
                        />
@@ -1167,6 +1252,10 @@ export default function DeviceEntry({ onBack, user }: { onBack: () => void, user
                        <input 
                          value={currentDevice.deviceNotes || ''}
                          onChange={(e) => setCurrentDevice({...currentDevice, deviceNotes: e.target.value })}
+                         onFocus={(e) => {
+                            e.target.select();
+                            e.target.scrollIntoView({ behavior: 'smooth', block: 'center' });
+                         }}
                          className="w-full bg-black border border-white/10 rounded-xl px-3 py-2 focus:border-orange-500 outline-none text-sm text-white text-right flex-1"
                          placeholder="مثال: ريموت كنترول، كابل طاقة، خدوش في الشاشة"
                        />

@@ -62,6 +62,7 @@ export interface InvoiceItem {
   deviceNotes?: string;
   technicalNotes?: string;
   cost: number;
+  createdAt?: any;
   status: '10' | '20' | '30' | '40' | '50' | '60' | 'new' | 'inspected' | 'ready' | 'unrepairable' | 'delivered' | string;
   subStatus?: 'intact' | 'unrepairable' | 'refused' | 'ready' | string;
   source?: 'inspection' | 'maintenance' | string;

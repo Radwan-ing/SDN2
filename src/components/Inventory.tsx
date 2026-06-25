@@ -85,22 +85,7 @@ export default function Inventory({ user, onBack }: { user: User, onBack?: () =>
   const currentItems = filteredItems.slice((safeCurrentPage - 1) * itemsPerPage, safeCurrentPage * itemsPerPage);
 
   return (
-    <div className="space-y-4 pb-24 md:pb-6 text-right -mx-4 md:-mx-8" dir="rtl">
-      {/* Unified Header */}
-      <div className="flex items-center px-4 py-3 border-b border-white/10 bg-black/20">
-        <div className="flex items-center gap-2">
-          {onBack && (
-            <button 
-              type="button"
-              onClick={onBack}
-              className="p-1.5 bg-white/5 hover:bg-white/10 text-gray-400 hover:text-white rounded-xl transition-all"
-            >
-              <ArrowLeft size={18} className="rtl:rotate-180" />
-            </button>
-          )}
-          <h1 className="text-lg font-black text-white m-0 p-0">{t('common.inventory', 'المخزون والأجهزة')}</h1>
-        </div>
-      </div>
+    <div className="space-y-4 pb-24 md:pb-6 text-right px-4 pt-4" dir="rtl">
 
       {isActionFormOpen && (
         <MaintenanceActionForm 

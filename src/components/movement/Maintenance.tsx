@@ -893,6 +893,9 @@ export default function Maintenance({ user, onBack, initialInvoice }: { user: Us
                 value={engineerName}
                 list="engineers-list"
                 onChange={e => setEngineerName(e.target.value)}
+                onFocus={(e) => {
+                  e.target.scrollIntoView({ behavior: 'smooth', block: 'center' });
+                }}
                 className="flex-1 bg-black/40 border border-white/10 rounded-lg px-3 py-2.5 focus:border-orange-500 outline-none transition-all text-sm text-right text-white box-border"
               />
               <datalist id="engineers-list">
@@ -997,6 +1000,13 @@ export default function Maintenance({ user, onBack, initialInvoice }: { user: Us
                    type="text"
                    value={currentFormRow.reason}
                    onChange={e => handleUpdateCurrentForm('reason', e.target.value)}
+                   onFocus={(e) => {
+                     e.target.select();
+                     e.target.scrollIntoView({ behavior: 'smooth', block: 'center' });
+                   }}
+                   onClick={(e) => {
+                     e.currentTarget.select();
+                   }}
                    className="flex-1 bg-black/40 border border-white/10 rounded-lg px-3 py-2.5 focus:border-orange-500 outline-none transition-all text-sm text-right text-white box-border"
                  />
                </div>
@@ -1120,34 +1130,31 @@ export default function Maintenance({ user, onBack, initialInvoice }: { user: Us
   }
 
   return (
-    <div className="max-w-6xl mx-auto space-y-6 pb-20">
-      {/* Unified Header */}
-      <div className="flex items-center px-4 py-3 border-b border-white/10 bg-black/20" dir="rtl">
-        <div className="flex items-center gap-2">
-          {onBack && (
-            <button onClick={onBack} className="p-1.5 bg-white/5 hover:bg-white/10 text-gray-400 hover:text-white rounded-xl transition-all">
-              <ArrowLeft size={18} className="rtl:rotate-180" />
-            </button>
-          )}
-          <h2 className="text-lg font-black text-white m-0 p-0 flex items-center gap-2">
-             <Wrench size={18} className="text-orange-500" />
-             {t('movement.maintenance', 'Maintenance Action')}
-          </h2>
-        </div>
-      </div>
+    <div className="max-w-6xl mx-auto space-y-6 pb-20 px-4 pt-4">
 
-      <div className="bg-[#1a1a1a] rounded-3xl p-6 md:p-8 border border-white/5 shadow-2xl relative overflow-hidden flex flex-col sm:flex-row items-center justify-between gap-6">
-        <div className="absolute top-0 right-0 w-40 h-40 bg-orange-600/10 rounded-full blur-3xl -translate-y-20 translate-x-10"></div>
-        <div className="bg-black/40 border border-white/10 p-4 rounded-2xl w-full sm:w-auto text-center sm:min-w-[200px] z-10 flex gap-4">
-           <div>
-             <div className="text-sm text-orange-500 font-bold uppercase tracking-widest">في انتظار الصيانة</div>
-             <div className="text-4xl font-black font-mono text-white">{totalInspectedDevices}</div>
-           </div>
-           <div className="w-px bg-white/10 hidden sm:block"></div>
-           <div>
-             <div className="text-sm text-green-500 font-bold uppercase tracking-widest">إجمالي المبلغ</div>
-             <div className="text-4xl font-black font-mono text-white">{pendingInvoicesTotalValue}</div>
-           </div>
+      {/* Large Orange/Amber Dual Stats Counter Card */}
+      <div className="px-0">
+        <div className="w-full bg-gradient-to-br from-orange-600 via-red-500 to-amber-600 text-white p-6 rounded-[2rem] shadow-lg relative overflow-hidden">
+          {/* Faint Background Icon */}
+          <div className="absolute top-1/2 left-6 -translate-y-1/2 opacity-10 pointer-events-none">
+            <Wrench size={160} />
+          </div>
+
+          <div className="relative z-10 grid grid-cols-2 divide-x divide-white/15 rtl:divide-x-reverse text-center">
+            {/* Section 1: Devices Waiting for Maintenance */}
+            <div className="flex flex-col items-center justify-center py-4 px-2">
+              <span className="text-3xl sm:text-5xl font-black font-mono tracking-wider drop-shadow-md">{totalInspectedDevices}</span>
+              <span className="text-xs sm:text-sm font-bold font-cairo mt-2 text-orange-100">أجهزة بانتظار الصيانة</span>
+              <span className="text-[10px] text-orange-200 mt-1 opacity-70">إجمالي الأجهزة قيد الإصلاح</span>
+            </div>
+
+            {/* Section 2: Estimated Invoices Total */}
+            <div className="flex flex-col items-center justify-center py-4 px-2">
+              <span className="text-3xl sm:text-5xl font-black font-mono tracking-wider drop-shadow-md">{pendingInvoicesTotalValue}</span>
+              <span className="text-xs sm:text-sm font-bold font-cairo mt-2 text-orange-100">إجمالي القيمة التقديرية</span>
+              <span className="text-[10px] text-orange-200 mt-1 opacity-70">تكلفة الصيانة الحالية</span>
+            </div>
+          </div>
         </div>
       </div>
 

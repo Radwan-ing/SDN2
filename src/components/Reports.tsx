@@ -347,30 +347,7 @@ export default function Reports({ onBack }: { onBack?: () => void }) {
   };
 
   return (
-    <div className="space-y-4 pb-12 text-right rtl" dir="rtl">
-      {/* Unified Header */}
-      <div className="flex items-center px-4 py-3 border-b border-white/10 bg-black/20" dir="rtl">
-        <div className="flex items-center gap-2">
-          {onBack && (
-            <button 
-              type="button"
-              onClick={onBack}
-              className="p-1.5 bg-white/5 hover:bg-white/10 text-gray-400 hover:text-white rounded-xl transition-all"
-            >
-              <ArrowLeft size={18} className="rtl:rotate-180" />
-            </button>
-          )}
-          <div>
-            <h1 className="text-lg font-black text-white m-0 p-0 flex items-center gap-2">
-              <BarChart3 size={18} className="text-orange-500" />
-              {t('common.reports', 'التقارير والإحصائيات')}
-            </h1>
-            <p className="text-[10px] text-gray-500 font-bold m-0 p-0 leading-none mt-1">
-              {t('reports.subtitle', 'متابعة الأداء المالي والتشغيلي والأرباح بدقة')}
-            </p>
-          </div>
-        </div>
-      </div>
+    <div className="space-y-4 pb-12 text-right rtl pt-4" dir="rtl">
 
       {/* Top Controls & Time Period Selector */}
       <div className="bg-white/[0.02] p-4 rounded-3xl border border-white/5 space-y-4">

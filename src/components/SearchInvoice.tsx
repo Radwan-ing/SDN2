@@ -451,26 +451,7 @@ export default function SearchInvoice({ onBack }: { onBack?: () => void }) {
   };
 
   return (
-    <div className="max-w-6xl mx-auto space-y-5 pb-20 text-right pr-4 pl-4" dir="rtl">
-      
-      {/* Unified Header */}
-      <div className="flex items-center justify-between px-2 py-3 border-b border-white/5">
-        <div className="flex items-center gap-3">
-          {onBack && (
-            <button 
-              type="button"
-              onClick={onBack}
-              className="p-1.5 bg-white/5 hover:bg-white/10 text-gray-400 hover:text-white rounded-xl transition-all"
-            >
-              <ArrowLeft size={18} className="rtl:rotate-180" />
-            </button>
-          )}
-          <div>
-            <h1 className="text-xl font-black text-white m-0 p-0 font-cairo">شاشة البحث المحاسبي والموحد</h1>
-            <p className="text-xs text-gray-500 font-bold mt-1">البحث الذكي عن الفواتير، السندات، الحسابات والعملاء</p>
-          </div>
-        </div>
-      </div>
+    <div className="max-w-6xl mx-auto space-y-5 pb-20 text-right pr-4 pl-4 pt-4" dir="rtl">
 
       {/* Top Controls / Tabs Buttons */}
       <div className="grid grid-cols-4 gap-1 sm:gap-2 bg-[#141414] p-1.5 rounded-2xl border border-white/5">

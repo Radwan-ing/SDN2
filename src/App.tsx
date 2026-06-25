@@ -21,7 +21,9 @@ import {
   CircleDollarSign,
   Wrench,
   ArrowRightLeft,
-  Clock
+  Clock,
+  MoreVertical,
+  ArrowLeft
 } from 'lucide-react';
 import { collection, query, where, getDocs, addDoc, doc, getDoc, setDoc } from './firebase';
 import { db } from './firebase';
@@ -56,6 +58,13 @@ export default function App() {
   const [loading, setLoading] = useState(true);
   const [showSetup, setShowSetup] = useState(false);
   const [activeTab, setActiveTab] = useState<'dashboard' | 'entry-exit' | 'device-movement' | 'inspection' | 'maintenance' | 'inventory' | 'reports' | 'customers' | 'settings' | 'search' | 'vault' | 'device-management'>('dashboard');
+  const [movementView, setMovementView] = useState<'hub' | 'inspection' | 'maintenance' | 'approval'>('hub');
+  const [entryExitView, setEntryExitView] = useState<'hub' | 'entry' | 'exit'>('hub');
+
+  useEffect(() => {
+    setMovementView('hub');
+    setEntryExitView('hub');
+  }, [activeTab]);
 
   useEffect(() => {
     document.dir = i18n.language === 'ar' ? 'rtl' : 'ltr';
@@ -220,9 +229,9 @@ export default function App() {
       case 'dashboard':
         return <Dashboard onNavigate={setActiveTab} shopName={shopConfig?.shopName} fiscalYear={shopConfig?.fiscalYear} />;
       case 'entry-exit':
-        return <EntryExit onBack={() => setActiveTab('dashboard')} user={user} />;
+        return <EntryExit onBack={() => setActiveTab('dashboard')} user={user} view={entryExitView} setView={setEntryExitView} />;
       case 'device-movement':
-        return <DeviceMovement onBack={() => setActiveTab('dashboard')} user={user} />;
+        return <DeviceMovement onBack={() => setActiveTab('dashboard')} user={user} view={movementView} setView={setMovementView} />;
       case 'approval':
         return <ApprovalAndParts user={user} onBack={() => setActiveTab('dashboard')} />;
       case 'inspection':
@@ -288,7 +297,7 @@ export default function App() {
           {/* Top Bar */}
           <header className="sticky top-0 z-40 bg-[#0a0a0a]/80 backdrop-blur-xl border-b border-white/5 px-4 md:px-8 py-3 flex items-center justify-between min-h-[64px]">
             <div className="flex items-center gap-3">
-              <div className="md:hidden flex items-center gap-2">
+              <div className="md:hidden flex items-center gap-2 -mr-1.5">
                  {shopConfig?.logoUrl ? (
                    <img src={shopConfig.logoUrl} alt="Logo" className="w-8 h-8 rounded-lg object-contain" />
                  ) : (
@@ -297,26 +306,48 @@ export default function App() {
                    </div>
                  )}
               </div>
+
+              {activeTab !== 'dashboard' && (
+                <button 
+                  onClick={() => {
+                    if (activeTab === 'device-movement' && movementView !== 'hub') {
+                      setMovementView('hub');
+                    } else if (activeTab === 'entry-exit' && entryExitView !== 'hub') {
+                      setEntryExitView('hub');
+                    } else {
+                      setActiveTab('dashboard');
+                    }
+                  }}
+                  className="p-1.5 bg-white/5 hover:bg-white/10 text-gray-400 hover:text-white rounded-xl transition-all"
+                  title="العودة للخلف"
+                >
+                  <ArrowLeft size={18} className="rtl:rotate-180" />
+                </button>
+              )}
+
               <h2 className="text-sm font-bold text-gray-400 uppercase tracking-widest font-cairo">
                 {activeTab === 'device-management' ? 'إدارة الأجهزة' : 
-                 activeTab === 'entry-exit' ? (i18n.language === 'ar' ? 'دخول وخروج أجهزة' : 'Device Entry & Exit') :
-                 activeTab === 'device-movement' ? (i18n.language === 'ar' ? 'قسم الصيانة' : 'Maintenance Department') :
+                 activeTab === 'entry-exit' ? (
+                   entryExitView === 'entry' ? 'دخول وخروج أجهزة - دخول أجهزة' :
+                   entryExitView === 'exit' ? 'دخول وخروج أجهزة - خروج أجهزة' :
+                   (i18n.language === 'ar' ? 'دخول وخروج أجهزة' : 'Device Entry & Exit')
+                 ) :
+                 activeTab === 'device-movement' ? (
+                   movementView === 'inspection' ? 'قسم الصيانة - إجراء فحص' :
+                   movementView === 'maintenance' ? 'قسم الصيانة - إجراء صيانة' :
+                   movementView === 'approval' ? 'قسم الصيانة - انتظار الموافقة والقطع' :
+                   (i18n.language === 'ar' ? 'قسم الصيانة' : 'Maintenance Department')
+                 ) :
                  activeTab === 'inspection' ? (i18n.language === 'ar' ? 'فحص الأجهزة' : 'Inspection') :
                  activeTab === 'maintenance' ? (i18n.language === 'ar' ? 'صيانة الأجهزة' : 'Maintenance') :
+                 activeTab === 'approval' ? (i18n.language === 'ar' ? 'انتظار الموافقة والقطع' : 'Approval & Parts') :
                  activeTab === 'vault' ? (i18n.language === 'ar' ? 'الحسابات' : 'Accounts') :
                  t(`common.${activeTab.replace(/-([a-z])/g, (g) => g[1].toUpperCase())}`)}
               </h2>
             </div>
-
+            
             <div className="flex items-center gap-2 md:gap-4">
-              <button 
-                onClick={() => i18n.changeLanguage(i18n.language === 'ar' ? 'en' : 'ar')}
-                className="px-2.5 py-1 text-[10px] font-black bg-white/5 hover:bg-white/10 rounded-lg transition-colors border border-white/10"
-              >
-                {i18n.language.startsWith('ar') ? 'EN' : 'العربية'}
-              </button>
-              
-              <button onClick={handleSignOut} className="flex items-center gap-2 pl-2 md:pl-4 md:border-l border-white/10 mr-1 md:mr-0 group relative" title={t('common.signOut')}>
+              <button onClick={handleSignOut} className="flex items-center gap-2 mr-1 md:mr-0 group relative" title={t('common.signOut')}>
                 <div className="text-right hidden sm:block group-hover:text-red-400 transition-colors">
                   <p className="text-[10px] font-bold text-gray-200 line-clamp-1">{user.name}</p>
                 </div>
@@ -325,6 +356,15 @@ export default function App() {
                   <LogOut size={14} className="opacity-0 group-hover:opacity-100 absolute transition-opacity" />
                 </div>
               </button>
+
+              <div className="md:hidden flex items-center">
+                 <button 
+                   onClick={() => setActiveTab('settings')}
+                   className="p-1.5 bg-white/5 hover:bg-white/10 rounded-full border border-white/5 transition-all text-gray-400 hover:text-white"
+                 >
+                   <MoreVertical size={20} />
+                 </button>
+              </div>
             </div>
           </header>
 
@@ -346,7 +386,7 @@ export default function App() {
           </div>
 
           {/* Bottom Navigation - Mobile Only */}
-          <nav className="md:hidden fixed bottom-0 left-0 right-0 z-50 bg-[#0f0f0f]/90 backdrop-blur-xl border-t border-white/5 py-2 px-6 flex items-center justify-around shadow-2xl mobile-bottom-nav" dir="rtl">
+          <nav className="md:hidden fixed bottom-0 left-0 right-0 z-50 bg-white/90 dark:bg-[#0f0f0f]/90 backdrop-blur-xl border-t border-gray-200 dark:border-white/5 py-2 px-6 flex items-center justify-around shadow-[0_-10px_40px_-15px_rgba(0,0,0,0.1)] dark:shadow-2xl mobile-bottom-nav" dir="rtl">
             <MobileNavItem 
               active={activeTab === 'entry-exit'} 
               onClick={() => setActiveTab('entry-exit')} 
@@ -364,7 +404,7 @@ export default function App() {
             <div className="relative -top-3">
               <button 
                 onClick={() => setActiveTab('dashboard')}
-                className="w-14 h-14 bg-[#1a1a1a] rounded-full flex flex-col items-center justify-center shadow-xl ring-4 ring-[#0f0f0f] mobile-center-btn border border-white/5"
+                className="w-14 h-14 bg-white dark:bg-[#1a1a1a] rounded-full flex flex-col items-center justify-center shadow-xl ring-4 ring-gray-100 dark:ring-[#0f0f0f] mobile-center-btn border border-gray-200 dark:border-white/5"
               >
                 <div className="grid grid-cols-2 gap-[2px] w-[20px] h-[20px]">
                   <div className="bg-orange-600 rounded-[3px]"></div>
@@ -417,12 +457,12 @@ function MobileNavItem({ active, onClick, icon, label, colorClass }: { active: b
   return (
     <button 
       onClick={onClick}
-      className={`flex flex-col items-center gap-1 transition-all ${active ? colorClass : 'text-gray-500'}`}
+      className={`flex flex-col items-center gap-1 transition-all ${active ? colorClass : 'text-gray-400 dark:text-gray-500 hover:' + colorClass}`}
     >
-      <div className={`p-1.5 rounded-lg transition-colors ${active ? 'bg-white/10 dark:bg-white/5 shadow-inner' : colorClass}`}>
+      <div className={`p-1.5 rounded-lg transition-colors ${active ? 'bg-gray-100 dark:bg-white/10 shadow-inner' : ''}`}>
         {icon}
       </div>
-      <span className={`text-[9px] font-black uppercase tracking-tighter opacity-80 ${active ? colorClass : colorClass}`}>{label}</span>
+      <span className={`text-[9px] font-black uppercase tracking-tighter opacity-80`}>{label}</span>
     </button>
   );
 }

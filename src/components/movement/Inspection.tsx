@@ -1273,6 +1273,9 @@ export default function Inspection({ user, onBack, initialInvoice }: { user: Use
                 value={engineerName}
                 list="engineers-list"
                 onChange={e => setEngineerName(e.target.value)}
+                onFocus={(e) => {
+                  e.target.scrollIntoView({ behavior: 'smooth', block: 'center' });
+                }}
                 className="flex-1 bg-black/40 border border-white/10 px-4 py-3 focus:border-purple-500 outline-none transition-all text-right rounded-xl"
               />
               <datalist id="engineers-list">
@@ -1438,10 +1441,17 @@ export default function Inspection({ user, onBack, initialInvoice }: { user: Use
                   </div>
                </div>
               <div className="flex items-start gap-3 w-full">
-                <label className="text-xs text-gray-500 whitespace-nowrap w-20 mt-3">تقرير المهندس</label>
+                <label className="text-xs text-gray-500 whitespace-nowrap w-20 mt-3">تقرير الفحص</label>
                 <textarea 
                   value={currentActionItem.report}
                   onChange={e => handleUpdateCurrentField('report', e.target.value)}
+                  onFocus={(e) => {
+                    e.target.select();
+                    e.target.scrollIntoView({ behavior: 'smooth', block: 'center' });
+                  }}
+                  onClick={(e) => {
+                    (e.target as HTMLTextAreaElement).select();
+                  }}
                   className="flex-1 bg-black/40 border border-white/10 px-4 py-2 focus:border-purple-500 outline-none transition-all h-12 resize-none rounded-xl text-right leading-relaxed"
                   placeholder="أدخل تفصيل المشكلة..."
                 />
@@ -1501,7 +1511,7 @@ export default function Inspection({ user, onBack, initialInvoice }: { user: Use
                       <th className="px-4 py-4 whitespace-nowrap">إسم الجهاز</th>
                       <th className="px-4 py-4 text-center whitespace-nowrap">الكمية</th>
                       <th className="px-4 py-4 text-center whitespace-nowrap">القرار</th>
-                      <th className="px-4 py-4 whitespace-nowrap">تقرير المهندس</th>
+                      <th className="px-4 py-4 whitespace-nowrap">تقرير الفحص</th>
                       <th className="px-4 py-4 text-center whitespace-nowrap">التكلفة</th>
                       <th className="px-4 py-4 pl-6 text-center whitespace-nowrap">الإجراءات</th>
                    </tr>
@@ -1570,7 +1580,7 @@ export default function Inspection({ user, onBack, initialInvoice }: { user: Use
   }
 
   return (
-    <div className="max-w-6xl mx-auto space-y-6 pb-20 relative" dir="rtl">
+    <div className="max-w-6xl mx-auto space-y-6 pb-20 relative px-4 pt-4" dir="rtl">
       {/* Toast Alert Container */}
       <AnimatePresence>
         {toastMessage && (
@@ -1593,59 +1603,55 @@ export default function Inspection({ user, onBack, initialInvoice }: { user: Use
         )}
       </AnimatePresence>
 
-      {/* Unified Header */}
-      <div className="flex flex-col sm:flex-row items-center justify-between px-4 py-3 border-b border-white/10 bg-black/20 gap-4" dir="rtl">
-        <div className="flex items-center gap-2 self-start sm:self-auto">
-          {onBack && (
-            <button onClick={onBack} className="p-1.5 bg-white/5 hover:bg-white/10 text-gray-400 hover:text-white rounded-xl transition-all">
-              <ArrowLeft size={18} className="rtl:rotate-180" />
-            </button>
-          )}
-          <h2 className="text-lg font-black text-white flex items-center gap-2 m-0 p-0">
-             <SearchIcon size={18} className="text-purple-500" />
-             {t('movement.inspection', 'Inspection')}
-          </h2>
-        </div>
+      {/* Large Purple Dual Stats Counter Card */}
+      <div className="px-4">
+        <div className="w-full bg-gradient-to-br from-purple-600 via-indigo-600 to-purple-700 text-white p-6 rounded-[2rem] shadow-lg relative overflow-hidden">
+          {/* Faint Background Icon */}
+          <div className="absolute top-1/2 left-6 -translate-y-1/2 opacity-10 pointer-events-none">
+            <SearchIcon size={160} />
+          </div>
 
-        {/* Beautiful Toggle Tab Switches */}
-        <div className="flex bg-black/40 border border-white/5 p-1 rounded-2xl gap-2 w-full sm:w-auto sm:min-w-[340px]">
-          <button
-            onClick={() => {
-              setSubTab('new_devices');
-              setSelectedInvoice(null);
-            }}
-            className={`flex-1 py-3 px-4 rounded-xl text-xs font-black transition-all flex items-center justify-center gap-2 ${
-              subTab === 'new_devices'
-                ? 'bg-purple-600 text-white shadow-lg shadow-purple-600/15 font-bold'
-                : 'text-gray-400 hover:text-white hover:bg-white/5'
-            }`}
-          >
-            <span>أجهزة جديدة</span>
-            <span className={`px-2 py-0.5 rounded-full text-[10px] font-black ${
-              subTab === 'new_devices' ? 'bg-white text-purple-600' : 'bg-white/10 text-gray-300'
-            }`}>
-              {countNewDevices}
-            </span>
-          </button>
-          
-          <button
-            onClick={() => {
-              setSubTab('under_inspection');
-              setSelectedInvoice(null);
-            }}
-            className={`flex-1 py-3 px-4 rounded-xl text-xs font-black transition-all flex items-center justify-center gap-2 ${
-              subTab === 'under_inspection'
-                ? 'bg-purple-600 text-white shadow-lg shadow-purple-600/15 font-bold'
-                : 'text-gray-400 hover:text-white hover:bg-white/5'
-            }`}
-          >
-            <span>أجهزة قيد الفحص</span>
-            <span className={`px-2 py-0.5 rounded-full text-[10px] font-black ${
-              subTab === 'under_inspection' ? 'bg-white text-purple-600' : 'bg-white/10 text-gray-300'
-            }`}>
-              {countInspectionDevices}
-            </span>
-          </button>
+          <div className="relative z-10 grid grid-cols-2 divide-x divide-white/15 rtl:divide-x-reverse">
+            {/* Clickable section 1: New Devices */}
+            <button
+              onClick={() => {
+                setSubTab('new_devices');
+                setSelectedInvoice(null);
+              }}
+              className={`flex flex-col items-center justify-center py-4 px-2 transition-all rounded-2xl relative cursor-pointer ${
+                subTab === 'new_devices' 
+                  ? 'bg-white/15 shadow-inner scale-[1.02]' 
+                  : 'hover:bg-white/5 opacity-80 hover:opacity-100'
+              }`}
+            >
+              {subTab === 'new_devices' && (
+                <span className="absolute top-3 right-3 w-2.5 h-2.5 bg-emerald-400 rounded-full animate-ping" />
+              )}
+              <span className="text-3xl sm:text-5xl font-black font-mono tracking-wider drop-shadow-md">{countNewDevices}</span>
+              <span className="text-xs sm:text-sm font-bold font-cairo mt-2 text-purple-100">أجهزة جديدة</span>
+              <span className="text-[10px] text-purple-200 mt-1 opacity-70">بانتظار الفحص</span>
+            </button>
+
+            {/* Clickable section 2: Under Inspection Devices */}
+            <button
+              onClick={() => {
+                setSubTab('under_inspection');
+                setSelectedInvoice(null);
+              }}
+              className={`flex flex-col items-center justify-center py-4 px-2 transition-all rounded-2xl relative cursor-pointer ${
+                subTab === 'under_inspection' 
+                  ? 'bg-white/15 shadow-inner scale-[1.02]' 
+                  : 'hover:bg-white/5 opacity-80 hover:opacity-100'
+              }`}
+            >
+              {subTab === 'under_inspection' && (
+                <span className="absolute top-3 right-3 w-2.5 h-2.5 bg-emerald-400 rounded-full animate-ping" />
+              )}
+              <span className="text-3xl sm:text-5xl font-black font-mono tracking-wider drop-shadow-md">{countInspectionDevices}</span>
+              <span className="text-xs sm:text-sm font-bold font-cairo mt-2 text-purple-100">أجهزة قيد الفحص</span>
+              <span className="text-[10px] text-purple-200 mt-1 opacity-70">إجمالي الأجهزة الحالية</span>
+            </button>
+          </div>
         </div>
       </div>
 
