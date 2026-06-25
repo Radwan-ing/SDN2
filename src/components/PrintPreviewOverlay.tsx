@@ -695,11 +695,17 @@ export default function PrintPreviewOverlay({
                     {items.map((it:any, idx:number) => (
                       <div key={idx} className="flex items-stretch min-h-[40px]">
                         <div className="py-3 px-3 border-l border-black text-xs font-mono w-12 flex items-center justify-center shrink-0">{idx + 1}</div>
-                        <div className="py-3 px-3 border-l border-black text-right w-48 flex items-center justify-start shrink-0 whitespace-nowrap overflow-hidden text-ellipsis" dir="ltr">
-                          {it.deviceType || '-'} - <span className="text-gray-600 text-[10px]">{it.deviceName || '-'}</span>
+                        <div className="py-3 px-3 border-l border-black text-right w-48 flex items-center justify-start shrink-0" dir="ltr">
+                          <span className="break-words w-full text-right" dir="rtl">
+                            {it.deviceType || '-'} - <span className="text-gray-500 text-[10px]">{it.deviceName || '-'}</span>
+                          </span>
                         </div>
-                        <div className="py-3 px-3 border-l border-black text-xs text-right flex-1 flex items-center justify-start whitespace-nowrap overflow-hidden text-ellipsis">{it.faultType || it.customerProblem || '-'}</div>
-                        <div className="py-3 px-3 border-l border-black text-xs text-right w-1/4 flex items-center justify-start shrink-0 whitespace-nowrap overflow-hidden text-ellipsis">{it.deviceNotes || '-'}</div>
+                        <div className="py-3 px-3 border-l border-black text-xs text-right flex-1 flex items-center justify-start">
+                          <span className="break-words w-full">{it.faultType || it.customerProblem || '-'}</span>
+                        </div>
+                        <div className="py-3 px-3 border-l border-black text-xs text-right w-1/4 flex items-center justify-start shrink-0">
+                          <span className="break-words w-full">{it.deviceNotes || '-'}</span>
+                        </div>
                         <div className="py-3 px-3 text-sm font-bold font-mono w-16 flex items-center justify-center shrink-0">{it.quantity || 1}</div>
                       </div>
                     ))}
@@ -733,8 +739,8 @@ export default function PrintPreviewOverlay({
                     {items.map((it:any, idx:number) => (
                       <div key={idx} className="flex items-stretch min-h-[40px]">
                         <div className="py-3 px-3 border-l border-black text-xs font-mono w-12 flex items-center justify-center shrink-0">{idx + 1}</div>
-                        <div className="py-3 px-3 border-l border-black text-sm text-right w-48 flex items-center justify-start shrink-0 whitespace-nowrap overflow-hidden text-ellipsis" dir="ltr">
-                          {it.deviceType} - {it.deviceName}
+                        <div className="py-3 px-3 border-l border-black text-sm text-right w-48 flex items-center justify-start shrink-0" dir="ltr">
+                          <span className="break-words w-full text-right" dir="rtl">{it.deviceType} - {it.deviceName}</span>
                         </div>
                         <div className="py-3 px-3 border-l border-black text-center font-mono text-sm w-28 flex items-center justify-center shrink-0" dir="ltr">
                           {Number(it.cost || 0).toLocaleString('en-US')}
@@ -745,25 +751,27 @@ export default function PrintPreviewOverlay({
                         <div className="py-3 px-3 border-l border-black text-xs text-center w-20 flex items-center justify-center shrink-0">
                           {it.warrantyId ? 'مشمول' : 'لا يوجد'}
                         </div>
-                        <div className="py-3 px-3 text-xs text-right text-gray-600 flex-1 flex items-center justify-start whitespace-nowrap overflow-hidden text-ellipsis">{it.technicalNotes || '-'}</div>
+                        <div className="py-3 px-3 text-xs text-right text-gray-600 flex-1 flex items-center justify-start">
+                          <span className="break-words w-full">{it.technicalNotes || '-'}</span>
+                        </div>
                       </div>
                     ))}
                   </div>
                 </div>
                 
                 {/* Financial Summary Box */}
-                <div className="flex border-2 border-black rounded-lg overflow-hidden bg-gray-50 mb-6 font-mono font-black w-2/3 mr-auto">
+                <div className="flex border-2 border-black rounded-lg overflow-hidden bg-gray-50 mb-6 font-cairo w-2/3 mr-auto">
                   <div className="flex-1 p-3 text-center border-l-2 border-black bg-white">
-                    <div className="text-[10px] text-gray-500 font-sans mb-1">الإجمالي المستحق</div>
-                    <div className="text-lg text-gray-900">{Number(invoice.totalCost || 0).toLocaleString('en-US')} <span className="text-xs font-sans">ر.ي</span></div>
+                    <div className="text-[10px] text-gray-500 font-bold mb-1">الإجمالي المستحق</div>
+                    <div className="text-base font-black text-gray-900"><span className="font-mono text-lg">{Number(invoice.totalCost || 0).toLocaleString('en-US')}</span> <span className="text-xs font-bold">ر.ي</span></div>
                   </div>
                   <div className="flex-1 p-3 text-center border-l-2 border-black bg-emerald-50 text-emerald-700">
-                    <div className="text-[10px] opacity-70 font-sans mb-1">المدفوع</div>
-                    <div className="text-lg">{Number(invoice.amountPaid || 0).toLocaleString('en-US')} <span className="text-xs font-sans">ر.ي</span></div>
+                    <div className="text-[10px] opacity-75 font-bold mb-1">المدفوع</div>
+                    <div className="text-base font-black"><span className="font-mono text-lg">{Number(invoice.amountPaid || 0).toLocaleString('en-US')}</span> <span className="text-xs font-bold">ر.ي</span></div>
                   </div>
                   <div className="flex-1 p-3 text-center bg-rose-50 text-rose-700">
-                    <div className="text-[10px] opacity-70 font-sans mb-1">المتبقي</div>
-                    <div className="text-lg">{(Number(invoice.totalCost || 0) - Number(invoice.amountPaid || 0)).toLocaleString('en-US')} <span className="text-xs font-sans">ر.ي</span></div>
+                    <div className="text-[10px] opacity-75 font-bold mb-1">المتبقي</div>
+                    <div className="text-base font-black"><span className="font-mono text-lg">{(Number(invoice.totalCost || 0) - Number(invoice.amountPaid || 0)).toLocaleString('en-US')}</span> <span className="text-xs font-bold">ر.ي</span></div>
                   </div>
                 </div>
               </>
@@ -785,11 +793,15 @@ export default function PrintPreviewOverlay({
                   {items.map((it:any, idx:number) => (
                     <div key={idx} className="flex items-stretch min-h-[40px]">
                       <div className="py-3 px-2 border-l border-black text-[10px] font-mono w-10 flex items-center justify-center shrink-0">{idx + 1}</div>
-                      <div className="py-3 px-2 border-l border-black text-right text-xs w-40 flex items-center justify-start shrink-0 whitespace-nowrap overflow-hidden text-ellipsis" dir="ltr">
-                        {it.deviceType} <span className="text-gray-500 text-[10px]">- {it.deviceName}</span>
+                      <div className="py-3 px-2 border-l border-black text-right text-xs w-40 flex items-center justify-start shrink-0" dir="ltr">
+                        <span className="break-words w-full text-right" dir="rtl">{it.deviceType} <span className="text-gray-500 text-[10px]">- {it.deviceName}</span></span>
                       </div>
-                      <div className="py-3 px-2 border-l border-black text-[11px] text-right w-1/4 flex items-center justify-start shrink-0 whitespace-nowrap overflow-hidden text-ellipsis">{it.faultType || it.customerProblem || '-'}</div>
-                      <div className="py-3 px-2 border-l border-black text-[11px] text-right text-emerald-800 flex-1 flex items-center justify-start whitespace-nowrap overflow-hidden text-ellipsis">{it.technicalNotes || '-'}</div>
+                      <div className="py-3 px-2 border-l border-black text-[11px] text-right w-1/4 flex items-center justify-start shrink-0">
+                        <span className="break-words w-full">{it.faultType || it.customerProblem || '-'}</span>
+                      </div>
+                      <div className="py-3 px-2 border-l border-black text-[11px] text-right text-emerald-800 flex-1 flex items-center justify-start">
+                        <span className="break-words w-full">{it.technicalNotes || '-'}</span>
+                      </div>
                       <div className="py-3 px-2 border-l border-black text-xs text-center text-blue-700 w-24 flex items-center justify-center shrink-0">
                          {['40','50'].includes(it.status) ? 'موافق' : 'بانتظار الرد'}
                       </div>
@@ -827,9 +839,11 @@ export default function PrintPreviewOverlay({
                       return (
                         <div key={idx} className="flex items-stretch min-h-[44px]">
                           <div className="px-3 py-4 text-center font-mono border-l-2 border-black w-12 flex items-center justify-center shrink-0">{idx+1}</div>
-                          <div className="px-3 py-4 border-l-2 border-black text-sm flex-1 flex items-center justify-start whitespace-nowrap overflow-hidden text-ellipsis" dir="ltr">
-                            {it.deviceType || '-'} - {it.deviceName || '-'}
-                            {it.technicalNotes && <span className="text-gray-600 text-[10px] mr-2" dir="rtl">- {it.technicalNotes}</span>}
+                          <div className="px-3 py-4 border-l-2 border-black text-sm flex-1 flex items-center justify-start" dir="ltr">
+                            <span className="break-words w-full text-right" dir="rtl">
+                              {it.deviceType || '-'} - <span className="text-gray-500 text-xs">{it.deviceName || '-'}</span>
+                              {it.technicalNotes && <span className="text-gray-600 text-[10px] mr-2 block mt-1">- {it.technicalNotes}</span>}
+                            </span>
                           </div>
                           <div className="px-3 py-4 text-center font-mono border-l-2 border-black w-20 flex items-center justify-center shrink-0" dir="ltr">{qty}</div>
                           <div className="px-3 py-4 text-center font-mono border-l-2 border-black w-28 flex items-center justify-center shrink-0" dir="ltr">{unit.toLocaleString('en-US')}</div>
@@ -867,15 +881,17 @@ export default function PrintPreviewOverlay({
                   {items.map((it:any, idx:number) => (
                     <div key={idx} className="flex items-stretch min-h-[40px]">
                       <div className="py-3 px-2 border-l border-black text-xs font-mono w-10 flex items-center justify-center shrink-0">{idx + 1}</div>
-                      <div className="py-3 px-2 border-l border-black text-right text-sm w-48 flex items-center justify-start shrink-0 whitespace-nowrap overflow-hidden text-ellipsis" dir="ltr">
-                        {it.deviceType} <span className="text-gray-500 text-xs">- {it.deviceName}</span>
+                      <div className="py-3 px-2 border-l border-black text-right text-sm w-48 flex items-center justify-start shrink-0" dir="ltr">
+                        <span className="break-words w-full text-right" dir="rtl">{it.deviceType} <span className="text-gray-500 text-xs">- {it.deviceName}</span></span>
                       </div>
-                      <div className="py-3 px-2 border-l border-black text-xs text-right flex-1 flex items-center justify-start whitespace-nowrap overflow-hidden text-ellipsis">{it.faultType || it.customerProblem || '-'}</div>
+                      <div className="py-3 px-2 border-l border-black text-xs text-right flex-1 flex items-center justify-start">
+                        <span className="break-words w-full">{it.faultType || it.customerProblem || '-'}</span>
+                      </div>
                       <div className="py-3 px-2 border-l border-black text-sm text-center text-blue-700 w-40 flex items-center justify-center shrink-0">
-                        {it.technician || '-'}
+                        <span className="break-words w-full">{it.technician || '-'}</span>
                       </div>
-                      <div className="py-3 px-2 text-center text-[10px] text-gray-600 w-32 flex items-center justify-center shrink-0 whitespace-nowrap overflow-hidden text-ellipsis">
-                        {it.deviceNotes || '-'}
+                      <div className="py-3 px-2 text-center text-[10px] text-gray-600 w-32 flex items-center justify-center shrink-0">
+                        <span className="break-words w-full">{it.deviceNotes || '-'}</span>
                       </div>
                     </div>
                   ))}
@@ -899,16 +915,20 @@ export default function PrintPreviewOverlay({
                   {items.map((it:any, idx:number) => (
                     <div key={idx} className="flex items-stretch min-h-[40px]">
                       <div className="py-3 px-2 border-l border-black text-xs font-mono w-10 flex items-center justify-center shrink-0">{idx + 1}</div>
-                      <div className="py-3 px-2 border-l border-black text-right text-xs w-40 flex items-center justify-start shrink-0 whitespace-nowrap overflow-hidden text-ellipsis" dir="ltr">
-                        {it.deviceType} - {it.deviceName}
+                      <div className="py-3 px-2 border-l border-black text-right text-xs w-40 flex items-center justify-start shrink-0" dir="ltr">
+                        <span className="break-words w-full text-right" dir="rtl">{it.deviceType} - {it.deviceName}</span>
                       </div>
-                      <div className="py-3 px-2 border-l border-black text-[11px] text-right w-1/4 flex items-center justify-start shrink-0 whitespace-nowrap overflow-hidden text-ellipsis">{it.faultType || it.customerProblem || '-'}</div>
-                      <div className="py-3 px-2 border-l border-black text-[11px] text-right flex-1 flex items-center justify-start whitespace-nowrap overflow-hidden text-ellipsis">{it.technicalNotes || '-'}</div>
+                      <div className="py-3 px-2 border-l border-black text-[11px] text-right w-1/4 flex items-center justify-start shrink-0">
+                        <span className="break-words w-full">{it.faultType || it.customerProblem || '-'}</span>
+                      </div>
+                      <div className="py-3 px-2 border-l border-black text-[11px] text-right flex-1 flex items-center justify-start">
+                        <span className="break-words w-full">{it.technicalNotes || '-'}</span>
+                      </div>
                       <div className={`py-3 px-2 border-l border-black text-xs text-center font-black w-24 flex items-center justify-center shrink-0 ${['50','60'].includes(it.status) ? 'text-emerald-600' : 'text-orange-600'}`}>
                         {getStatusText(it.status)}
                       </div>
-                      <div className="py-3 px-2 text-center text-[11px] text-gray-700 w-24 flex items-center justify-center shrink-0 whitespace-nowrap overflow-hidden text-ellipsis">
-                        {it.partsUsed ? it.partsUsed.length + ' قطع' : 'لا يوجد'}
+                      <div className="py-3 px-2 text-center text-[11px] text-gray-700 w-24 flex items-center justify-center shrink-0">
+                        <span className="break-words w-full">{it.partsUsed ? it.partsUsed.length + ' قطع' : 'لا يوجد'}</span>
                       </div>
                     </div>
                   ))}
