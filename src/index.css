@@ -12,6 +12,12 @@
 }
 
 @layer base {
+  html, body {
+    -webkit-text-size-adjust: 100% !important;
+    -moz-text-size-adjust: 100% !important;
+    text-size-adjust: 100% !important;
+  }
+
   body {
     @apply bg-[#0f0f0f] text-gray-100 antialiased;
   }
