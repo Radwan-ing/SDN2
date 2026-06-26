@@ -60,6 +60,78 @@ export default function App() {
   const [activeTab, setActiveTab] = useState<'dashboard' | 'entry-exit' | 'device-movement' | 'inspection' | 'maintenance' | 'inventory' | 'reports' | 'customers' | 'settings' | 'search' | 'vault' | 'device-management'>('dashboard');
   const [movementView, setMovementView] = useState<'hub' | 'inspection' | 'maintenance' | 'approval'>('hub');
   const [entryExitView, setEntryExitView] = useState<'hub' | 'entry' | 'exit'>('hub');
+  const [showExitConfirm, setShowExitConfirm] = useState(false);
+
+  // Maintain latest navigation state in a ref for back-listeners
+  const navigationStateRef = React.useRef({ activeTab, movementView, entryExitView });
+
+  useEffect(() => {
+    navigationStateRef.current = { activeTab, movementView, entryExitView };
+  }, [activeTab, movementView, entryExitView]);
+
+  const handleBack = () => {
+    const { activeTab: currentTab, movementView: currentMovement, entryExitView: currentEntryExit } = navigationStateRef.current;
+
+    // 1. Dispatch custom event for child components to intercept
+    const backEvent = new CustomEvent('app-back-button', { cancelable: true });
+    const intercepted = !window.dispatchEvent(backEvent);
+
+    if (intercepted) {
+      return;
+    }
+
+    // 2. Main app navigation back
+    if (currentTab === 'device-movement' && currentMovement !== 'hub') {
+      setMovementView('hub');
+    } else if (currentTab === 'entry-exit' && currentEntryExit !== 'hub') {
+      setEntryExitView('hub');
+    } else if (currentTab !== 'dashboard') {
+      setActiveTab('dashboard');
+    } else {
+      setShowExitConfirm(true);
+    }
+  };
+
+  // Bind Capacitor app backButton event & standard browser popstate
+  useEffect(() => {
+    let isMounted = true;
+    let capSub: any = null;
+
+    const setupListeners = async () => {
+      // 1. Capacitor native backButton listener
+      try {
+        const { App: CapApp } = await import('@capacitor/app');
+        capSub = await CapApp.addListener('backButton', () => {
+          if (isMounted) {
+            handleBack();
+          }
+        });
+      } catch (err) {
+        console.log('Capacitor App plugin not available, using fallback browser events');
+      }
+
+      // 2. Initial push state for browser popstate
+      window.history.pushState({ appNav: true }, '');
+    };
+
+    setupListeners();
+
+    const handlePopState = (e: PopStateEvent) => {
+      // Re-push state so that the browser doesn't actually navigate back
+      window.history.pushState({ appNav: true }, '');
+      handleBack();
+    };
+
+    window.addEventListener('popstate', handlePopState);
+
+    return () => {
+      isMounted = false;
+      if (capSub) {
+        capSub.remove();
+      }
+      window.removeEventListener('popstate', handlePopState);
+    };
+  }, []);
 
   useEffect(() => {
     setMovementView('hub');
@@ -146,10 +218,24 @@ export default function App() {
     }
   };
 
-  const handleSignOut = () => {
-    if (confirm(t('common.confirmSignOut'))) {
-      setUser(null);
-      localStorage.removeItem('snd_user');
+  const handleSignOut = async () => {
+    try {
+      const { Dialog } = await import('@capacitor/dialog');
+      const { value } = await Dialog.confirm({
+        title: t('common.signOut'),
+        message: t('common.confirmSignOut') || 'Are you sure you want to sign out?',
+        okButtonTitle: 'نعم',
+        cancelButtonTitle: 'إلغاء'
+      });
+      if (value) {
+        setUser(null);
+        localStorage.removeItem('snd_user');
+      }
+    } catch (e) {
+      if (window.confirm(t('common.confirmSignOut') || 'Are you sure you want to sign out?')) {
+        setUser(null);
+        localStorage.removeItem('snd_user');
+      }
     }
   };
 
@@ -309,15 +395,7 @@ export default function App() {
 
               {activeTab !== 'dashboard' && (
                 <button 
-                  onClick={() => {
-                    if (activeTab === 'device-movement' && movementView !== 'hub') {
-                      setMovementView('hub');
-                    } else if (activeTab === 'entry-exit' && entryExitView !== 'hub') {
-                      setEntryExitView('hub');
-                    } else {
-                      setActiveTab('dashboard');
-                    }
-                  }}
+                  onClick={handleBack}
                   className="p-1.5 bg-white/5 hover:bg-white/10 text-gray-400 hover:text-white rounded-xl transition-all"
                   title="العودة للخلف"
                 >
@@ -369,8 +447,8 @@ export default function App() {
           </header>
 
           {/* Tab Content */}
-          <div className={`flex-1 ${activeTab === 'dashboard' || activeTab === 'settings' ? 'overflow-hidden' : 'overflow-y-auto'} p-4 md:p-8 pb-28 md:pb-8`}>
-            <div className="max-w-7xl mx-auto h-full">
+          <div className={`flex-1 ${activeTab === 'dashboard' ? 'overflow-hidden' : 'overflow-y-auto'} p-4 md:p-8 pb-28 md:pb-8`}>
+            <div className="max-w-7xl mx-auto min-h-full">
               <AnimatePresence mode="wait">
                 <motion.div
                   key={activeTab}
@@ -431,6 +509,50 @@ export default function App() {
           </nav>
         </main>
       </div>
+
+      <AnimatePresence>
+        {showExitConfirm && (
+          <div className="fixed inset-0 z-[100] flex items-center justify-center p-4 bg-black/85 backdrop-blur-sm" dir="rtl">
+            <motion.div 
+              initial={{ opacity: 0, scale: 0.95, y: 15 }}
+              animate={{ opacity: 1, scale: 1, y: 0 }}
+              exit={{ opacity: 0, scale: 0.95, y: 15 }}
+              transition={{ type: 'spring', duration: 0.35, bounce: 0.1 }}
+              className="bg-[#121212] border border-white/10 rounded-2xl p-6 max-w-sm w-full text-center shadow-2xl relative overflow-hidden"
+            >
+              <div className="w-16 h-16 bg-red-500/10 border border-red-500/20 text-red-500 rounded-full flex items-center justify-center mx-auto mb-4 shadow-inner">
+                <LogOut size={28} />
+              </div>
+              <h3 className="text-lg font-black text-white font-cairo mb-2">تأكيد الخروج</h3>
+              <p className="text-gray-400 text-sm mb-6 font-bold leading-relaxed font-cairo">
+                هل تريد بالفعل الخروج من البرنامج وإغلاقه؟
+              </p>
+              <div className="flex gap-3 justify-center">
+                <button 
+                  onClick={async () => {
+                    try {
+                      const { App: CapApp } = await import('@capacitor/app');
+                      await CapApp.exitApp();
+                    } catch (err) {
+                      console.error("Failed to exit app", err);
+                      setShowExitConfirm(false);
+                    }
+                  }}
+                  className="px-6 py-2.5 bg-red-600 hover:bg-red-500 text-white font-bold rounded-xl transition-all shadow-lg shadow-red-900/20 text-sm font-cairo cursor-pointer"
+                >
+                  خروج
+                </button>
+                <button 
+                  onClick={() => setShowExitConfirm(false)}
+                  className="px-6 py-2.5 bg-white/5 hover:bg-white/10 text-gray-300 font-bold rounded-xl transition-all text-sm font-cairo cursor-pointer"
+                >
+                  إلغاء
+                </button>
+              </div>
+            </motion.div>
+          </div>
+        )}
+      </AnimatePresence>
     </div>
     </SecurityGuard>
   );

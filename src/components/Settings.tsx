@@ -13,7 +13,7 @@ import { AnimatePresence, motion } from 'motion/react';
 import { useTranslation } from 'react-i18next';
 import { Filesystem, Directory } from '@capacitor/filesystem';
 import { Device } from '@capacitor/device';
-import { NativeBiometric } from 'capacitor-native-biometric';
+import { NativeBiometric } from '@capgo/capacitor-native-biometric';
 
 export default function Settings({ user, onShopConfigUpdate }: { user: User, onShopConfigUpdate?: (config: any) => void }) {
   const { t, i18n } = useTranslation();
@@ -523,10 +523,24 @@ export default function Settings({ user, onShopConfigUpdate }: { user: User, onS
     }
   };
 
-  const handleSignOut = () => {
-    if (confirm(t('common.confirmSignOut') || 'Are you sure you want to sign out?')) {
-      localStorage.removeItem('snd_user');
-      window.location.reload();
+  const handleSignOut = async () => {
+    try {
+      const { Dialog } = await import('@capacitor/dialog');
+      const { value } = await Dialog.confirm({
+        title: t('common.signOut') || 'تسجيل الخروج',
+        message: t('common.confirmSignOut') || 'هل أنت متأكد من رغبتك في تسجيل الخروج؟',
+        okButtonTitle: 'نعم',
+        cancelButtonTitle: 'إلغاء'
+      });
+      if (value) {
+        localStorage.removeItem('snd_user');
+        window.location.reload();
+      }
+    } catch (e) {
+      if (window.confirm(t('common.confirmSignOut') || 'Are you sure you want to sign out?')) {
+        localStorage.removeItem('snd_user');
+        window.location.reload();
+      }
     }
   };
 
@@ -537,7 +551,7 @@ export default function Settings({ user, onShopConfigUpdate }: { user: User, onS
       setProgress({ active: true, value: 0, label: 'جاري تهيئة النظام...' });
 
       // Clear Firestore
-      const collectionsToClear = ['invoices', 'invoice_items', 'customers', 'maintenance_actions', 'approval_actions', 'engineers', 'vault_transactions', 'inventory_items', 'device_categories', 'device_models'];
+      const collectionsToClear = ['invoices', 'invoice_items', 'customers', 'maintenance_actions', 'approval_actions', 'vault_transactions'];
       
       for (let i = 0; i < collectionsToClear.length; i++) {
         const colName = collectionsToClear[i];
@@ -556,7 +570,7 @@ export default function Settings({ user, onShopConfigUpdate }: { user: User, onS
       
       // Clear Local SQLite
       setProgress({ active: true, value: 50, label: 'جاري تنظيف قاعدة البيانات المحلية...' });
-      const tablesToClear = ['invoices', 'invoice_items', 'customers', 'maintenance_actions', 'approval_actions', 'engineers', 'vault_transactions', 'inventory_items', 'device_categories', 'device_models'];
+      const tablesToClear = ['invoices', 'invoice_items', 'customers', 'maintenance_actions', 'approval_actions', 'vault_transactions'];
       for (const table of tablesToClear) {
         try {
           console.log(`Clearing table ${table}...`);
@@ -1020,7 +1034,7 @@ export default function Settings({ user, onShopConfigUpdate }: { user: User, onS
   ];
 
   return (
-    <div className="max-w-4xl mx-auto px-4 h-full overflow-hidden">
+    <div className="max-w-4xl mx-auto px-4 pb-24">
       {/* Progress Overlay */}
       {progress.active && (
         <div className="fixed inset-0 z-[110] flex items-center justify-center bg-black/80 backdrop-blur-sm p-6">
@@ -1773,14 +1787,18 @@ export default function Settings({ user, onShopConfigUpdate }: { user: User, onS
                                    const checked = e.target.checked;
                                    if (checked) {
                                      const info = await Device.getInfo();
-                                     if (info.platform === 'web') {
-                                       alert('البصمة غير مدعومة في متصفح الويب. يرجى استخدام PIN بدلاً من ذلك.');
-                                       return;
-                                     }
-                                     const bio = await NativeBiometric.isAvailable();
-                                     if (!bio.isAvailable) {
-                                       alert('جهازك لا يدعم التحقق البيومتري أو لم يتم إعداده.');
-                                       return;
+                                     if (info.platform !== 'web') {
+                                       try {
+                                         const bio = await NativeBiometric.isAvailable();
+                                         if (!bio.isAvailable) {
+                                           alert('جهازك لا يدعم التحقق البيومتري أو لم يتم إعداده.');
+                                           return;
+                                         }
+                                       } catch (e) {
+                                         console.log('Biometric error', e);
+                                         alert('تعذر الوصول لمستشعر البصمة.');
+                                         return;
+                                       }
                                      }
                                    }
                                    setBiometricEnabled(checked);

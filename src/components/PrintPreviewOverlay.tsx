@@ -2,6 +2,7 @@ import React, { useState, useEffect, useRef } from 'react';
 import { ArrowLeft, Printer, Share2, Smartphone, MessageCircle, Phone, Loader2, FileText, Settings2, MapPin, Facebook } from 'lucide-react';
 import { jsPDF } from 'jspdf';
 import html2canvas from 'html2canvas';
+import { TransformWrapper, TransformComponent } from 'react-zoom-pan-pinch';
 import { sharePdfFile } from '../lib/shareHelper';
 import { sanitizeDocumentStyles, sanitizeElementInlineStyles, cleanOklchInStyleText, restoreDocumentStyles } from '../lib/html2canvasHelper';
 
@@ -25,6 +26,17 @@ export default function PrintPreviewOverlay({
   const containerRef = useRef<HTMLDivElement>(null);
   const printAreaRef = useRef<HTMLDivElement>(null);
   const [contentHeight, setContentHeight] = useState(1123);
+
+  useEffect(() => {
+    const handleBackButton = (e: Event) => {
+      e.preventDefault();
+      onClose();
+    };
+    window.addEventListener('app-back-button', handleBackButton);
+    return () => {
+      window.removeEventListener('app-back-button', handleBackButton);
+    };
+  }, [onClose]);
 
   useEffect(() => {
     if (printAreaRef.current) {
@@ -78,19 +90,20 @@ export default function PrintPreviewOverlay({
     const originalStyle = document.createElement('style');
     originalStyle.innerHTML = `
       @media print {
-        @page { size: auto; margin: 0; }
+        @page { size: A4 portrait; margin: 0; }
         body * { visibility: hidden !important; }
-        .scale-wrapper { height: auto !important; margin: 0 !important; transform: none !important; }
         #print-preview-area, #print-preview-area * { visibility: visible !important; }
         #print-preview-area {
           position: absolute;
           left: 0;
           top: 0;
-          width: 100% !important;
+          width: 210mm !important;
+          min-height: 297mm !important;
           margin: 0 !important;
           padding: 10mm !important;
           color: #000000 !important;
           background-color: #ffffff !important;
+          transform: none !important;
         }
       }
     `;
@@ -432,19 +445,23 @@ export default function PrintPreviewOverlay({
 
       <div 
         ref={containerRef} 
-        className="flex-1 overflow-y-auto bg-black p-4 md:p-8 pb-24 text-right w-full flex flex-col items-center justify-start overflow-x-hidden"
+        className="flex-1 overflow-hidden bg-black text-right w-full flex flex-col items-center justify-start scale-wrapper"
       >
-        <div 
-          className="relative origin-top transition-transform duration-150 shrink-0 scale-wrapper"
-          style={{ 
-            width: '794px', 
-            height: `${contentHeight * scale}px`, 
-            transform: `scale(${scale})`,
-            marginBottom: scale < 1 ? `${(scale - 1) * contentHeight}px` : '0px'
-          }}
+        <TransformWrapper 
+          initialScale={scale > 0 ? scale : 1}
+          minScale={0.2}
+          maxScale={4}
+          centerOnInit={true}
+          wheel={{ step: 0.1 }}
         >
-          <div ref={printAreaRef} id="print-preview-area" className="p-8 bg-white text-gray-900 print:p-0 print:bg-white print:text-black w-[794px] mx-auto flex flex-col relative shrink-0 font-cairo shadow-2xl min-h-fit" dir="rtl">
-            {/* Faint print date and time watermark */}
+          <TransformComponent wrapperStyle={{ width: '100%', height: '100%' }}>
+            <div 
+              ref={printAreaRef} 
+              id="print-preview-area" 
+              className="p-8 bg-white text-gray-900 print:p-0 print:bg-white print:text-black w-[210mm] min-h-[297mm] mx-auto flex flex-col relative shrink-0 font-cairo shadow-2xl" 
+              dir="rtl"
+            >
+              {/* Faint print date and time watermark */}
             <div className="absolute left-8 top-3 text-[8px] text-gray-400 font-normal select-none opacity-45 font-mono pointer-events-none" dir="rtl">
               تاريخ ووقت الطباعة: {new Date().toLocaleDateString('ar-YE')} {new Date().toLocaleTimeString('ar-YE', { hour12: true, hour: '2-digit', minute: '2-digit' })}
             </div>
@@ -1029,9 +1046,9 @@ export default function PrintPreviewOverlay({
             </div>
             
           </div>
-
-        </div>
-        </div>
+          </div>
+          </TransformComponent>
+        </TransformWrapper>
       </div>
     </div>
   );

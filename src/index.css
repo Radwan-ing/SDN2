@@ -429,3 +429,21 @@ html.light-app .mobile-center-btn {
   padding: 0 !important;
 }
 
+/* Global overrides for html2canvas compatibility in print area */
+#print-preview-area * {
+  -webkit-print-color-adjust: exact !important;
+  print-color-adjust: exact !important;
+}
+
+#print-preview-area .break-words {
+  word-break: break-word !important;
+  overflow-wrap: break-word !important;
+  white-space: normal !important;
+}
+
+/* Ensure flex children don't overflow when wrapping text in html2canvas */
+#print-preview-area [class*="flex-1"],
+#print-preview-area [class*="w-"] {
+  min-width: 0;
+}
+

@@ -1,7 +1,7 @@
 import React, { useState, useEffect } from 'react';
 import { motion, AnimatePresence } from 'motion/react';
 import { Fingerprint, Lock, ShieldAlert } from 'lucide-react';
-import { NativeBiometric } from 'capacitor-native-biometric';
+import { NativeBiometric } from '@capgo/capacitor-native-biometric';
 import { Device } from '@capacitor/device';
 
 interface SecurityGuardProps {
@@ -55,7 +55,8 @@ export default function SecurityGuard({ children }: SecurityGuardProps) {
     try {
       const info = await Device.getInfo();
       if (info.platform === 'web') {
-        // Mock success for web development if we want, but better to just not lock
+        // Mock success for web development
+        setLocked(false);
         return;
       }
 
